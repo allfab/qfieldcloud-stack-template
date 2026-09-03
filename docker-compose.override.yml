@@ -1,12 +1,19 @@
 # /opt/docker/qfieldcloud-stack/docker-compose.override.yml
-# Le SEUL fichier Compose qui m'appartient. Chargé en dernier (voir COMPOSE_FILE).
+# Le SEUL fichier Compose qui m'appartient. Charge en dernier (voir COMPOSE_FILE).
 services:
 
   nginx:
-    # L'instance est derrière un frontal Traefik : rien à publier sur le LAN.
+    # L'instance est derriere un frontal Traefik : rien a publier sur le LAN.
     ports: !override
       - "127.0.0.1:8480:80"
       - "127.0.0.1:8443:443"
+    # Les conteneurs QGIS ephemeres rappellent l'API pour telecharger les fichiers
+    # du projet, et doivent passer par nginx (X-Accel-Redirect). Or nginx n'accepte
+    # qu'un seul en-tete Host : QFIELDCLOUD_HOST. On lui donne ce nom sur le reseau.
+    networks:
+      default:
+        aliases:
+          - qfieldcloud.webgis.allfabox.fr
 
   db:
     # Base de l'application : accessible pour les dumps, pas depuis le LAN.
