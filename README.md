@@ -20,10 +20,19 @@ qui dit si vous avez contracte une dette.
 
 ## Demarrage, d'un dossier vide a une instance qui repond
 
+Si vous etes passe par le bouton **« Use this template »**, votre depot est deja vierge :
+clonez-le et sautez l'etape 0.
+
 ```bash
-# 1. Le socle
-git clone --recurse-submodules <ce-depot> qfieldcloud-stack
+# 0. Repartir d'un historique a vous
+#    Les commits de ce depot racontent MON instance (mon frontal, mes IP). Le votre
+#    doit raconter la votre : c'est tout l'interet du montage.
+git clone --recurse-submodules https://github.com/allfab/qfieldcloud-stack-template.git qfieldcloud-stack
 cd qfieldcloud-stack
+rm -rf .git && git init
+git submodule add -b release https://github.com/opengisch/QFieldCloud.git src 2>/dev/null || true
+
+# 1. Le socle
 git -C src checkout v26.26          # choisissez le tag, ne restez pas sur une branche
 
 # 2. Les dossiers que Docker creerait en root si on ne le prenait pas de vitesse
