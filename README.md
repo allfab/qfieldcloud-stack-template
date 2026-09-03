@@ -27,12 +27,13 @@ clonez-le et sautez l'etape 0.
 # 0. Repartir d'un historique a vous
 #    Les commits de ce depot racontent MON instance (mon frontal, mes IP). Le votre
 #    doit raconter la votre : c'est tout l'interet du montage.
-git clone --recurse-submodules https://github.com/allfab/qfieldcloud-stack-template.git qfieldcloud-stack
+git clone https://github.com/allfab/qfieldcloud-stack-template.git qfieldcloud-stack
 cd qfieldcloud-stack
-rm -rf .git && git init
-git submodule add -b release https://github.com/opengisch/QFieldCloud.git src 2>/dev/null || true
+rm -rf .git src        # src/.git pointe dans .git/modules/ : les deux partent ensemble
+git init
 
 # 1. Le socle
+git submodule add -b release https://github.com/opengisch/QFieldCloud.git src
 git -C src checkout v26.26          # choisissez le tag, ne restez pas sur une branche
 
 # 2. Les dossiers que Docker creerait en root si on ne le prenait pas de vitesse
