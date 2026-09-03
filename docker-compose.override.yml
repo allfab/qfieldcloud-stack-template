@@ -32,3 +32,29 @@ services:
       - log_destination=stderr
       - -c
       - shared_buffers=256MB
+
+  rustfs:
+    # L'API S3 ne peut PAS aller sur 127.0.0.1 : l'endpoint_url de STORAGES
+    # (http://172.17.0.1:8009) est recopie tel quel dans les URL presignees, que
+    # nginx ET les conteneurs QGIS ephemeres doivent pouvoir atteindre. On la
+    # publie donc sur la passerelle docker0 : joignable de tout conteneur et de
+    # l'hote, invisible depuis le LAN. La console web, elle, reste sur loopback.
+    ports: !override
+      - "${STORAGE_API_BIND_IP}:${OBJECT_STORAGE_API_PORT}:9000"
+      - "${STORAGE_CONSOLE_BIND_IP}:${OBJECT_STORAGE_BROWSER_PORT}:9001"
+
+  smtp4dev:
+    # Piege a courriels de developpement : il n'envoie rien et ne doit rien
+    # recevoir de l'exterieur. L'application l'atteint par le reseau Compose
+    # (EMAIL_HOST=smtp4dev), pas par ces ports.
+    ports: !override
+      - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_WEB_PORT}:80"
+      - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_SMTP_PORT}:25"
+      - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_IMAP_PORT}:143"
+
+  webdav:
+    # Meme logique que rustfs : s'il sert un jour de stockage d'attachements,
+    # c'est WEBDAV_SERVER_NAMES ("172.17.0.1,webdav") qui dit par ou. Rien de
+    # tout cela ne passe par le LAN.
+    ports: !override
+      - "${WEBDAV_BIND_IP}:${WEBDAV_PUBLIC_PORT}:80"
