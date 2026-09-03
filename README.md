@@ -68,6 +68,7 @@ Toutes sont marquees `change_me` ou pointent vers `example.org` dans le template
 | `STORAGES` | `access_key`/`secret_key` doivent etre alignes sur `OBJECT_STORAGE_ROOT_*`, sinon `createbuckets` echoue |
 | `WEB_BIND_IP` | **Non upstream** : ou publier le port HTTPS. `127.0.0.1` si le frontal est sur cette machine, l'IP de l'hote s'il est ailleurs |
 | `LETSENCRYPT_EMAIL` | `LETSENCRYPT_STAGING` reste a `1` tant que le DNS public ne pointe pas ici |
+| `QFIELDCLOUD_ACCOUNT_ADAPTER` | **A ne pas oublier.** Defaut upstream `...AccountAdapterSignUpOpen` : n'importe qui trouvant votre URL peut se creer un compte. `...AccountAdapterSignUpClosed` bascule en mode sur invitation (les invitations continuent de marcher, l'admin Django aussi) |
 | `QFIELDCLOUD_DEFAULT_TIME_ZONE` | Defaut upstream : `Europe/Zurich` |
 
 ## Les trois pieges qui coutent une soiree
