@@ -3,21 +3,21 @@
 services:
 
   nginx:
-    # L'instance est derriere un frontal Traefik, qui vit sur une autre machine
-    # (10.99.99.10) et tape sur https://10.10.20.70:8443. Le port TLS doit donc
-    # etre joignable depuis le LAN -- mais on le lie a la seule IP du LXC, pas a
-    # 0.0.0.0 : ni loopback superflu, ni ecoute sur les bridges Docker.
-    # Le port clair (8480) reste sur loopback : personne n'a a l'atteindre.
+    # Ou publier nginx. Deux cas :
+    #  - frontal sur CETTE machine   -> WEB_BIND_IP=127.0.0.1
+    #  - frontal sur une AUTRE machine -> WEB_BIND_IP=<IP de cet hote>
+    # On evite 0.0.0.0, qui ferait ecouter nginx jusque sur les bridges Docker.
+    # Le port clair reste sur loopback : personne n'a a l'atteindre de l'exterieur.
     ports: !override
-      - "127.0.0.1:8480:80"
-      - "10.10.20.70:8443:443"
+      - "127.0.0.1:${WEB_HTTP_PORT}:80"
+      - "${WEB_BIND_IP}:${WEB_HTTPS_PORT}:443"
     # Les conteneurs QGIS ephemeres rappellent l'API pour telecharger les fichiers
     # du projet, et doivent passer par nginx (X-Accel-Redirect). Or nginx n'accepte
     # qu'un seul en-tete Host : QFIELDCLOUD_HOST. On lui donne ce nom sur le reseau.
     networks:
       default:
         aliases:
-          - qfieldcloud.webgis.allfabox.fr
+          - ${QFIELDCLOUD_HOST}
 
   db:
     # Base de l'application : accessible pour les dumps, pas depuis le LAN.
