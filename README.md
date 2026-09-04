@@ -119,12 +119,61 @@ git add src && git commit -m "Montee en v26.27"
 Le commit ne contient qu'un changement de pointeur de sous-module. C'est tout
 l'interet du montage : rien a reporter a la main.
 
+## Retirer un service upstream
+
+On ne supprime pas un service du sous-module : on lui donne un **profil** que
+personne n'active, depuis `docker-compose.override.yml`.
+
+```yaml
+  certbot:
+    profiles: ["never"]
+```
+
+Le service disparait de `docker compose config --services`. Mais **`up -d
+--remove-orphans` ne supprime pas le conteneur deja en marche** : Compose ne
+considere pas comme orpheline une instance simplement exclue par un profil. Il
+faut la nommer, en reactivant le profil le temps de la commande :
+
+```bash
+docker compose --env-file ../.env --profile never rm -sf certbot
+```
+
+Ce depot retire ainsi `certbot` (le TLS est termine par un frontal), puis
+`rustfs` et `createbuckets` (le stockage objet est externalise). Si vous restez
+en profil standalone, enlevez les deux dernieres lignes `profiles`.
+
 ## Sauvegarde
 
 Trois choses, et trois seulement :
 
 - la base — `pg_dump` logique ;
 - le bucket du stockage objet — miroir S3 ;
-- le `.env`, sans lequel les deux premiers sont inexploitables.
+- le `.env`, sans lequel les deux premiers sont inexploitables (`SECRET_KEY` et
+  `SALT_KEY` dechiffrent les champs chiffres de la base).
 
 Les grilles PROJ (~850 Mo) et les images sont integralement reconstructibles.
+
+Deux ordonnanceurs, pour une raison precise :
+
+| Quoi | Par qui | Quand |
+|---|---|---|
+| `pg_dump -Fc` + purge a 14 jours | **ofelia**, `job-exec` sur `db` (labels de l'override) | 02:30 |
+| miroir du bucket + copie du `.env` | **crontab utilisateur**, `./backup-storage.sh` | 02:45 |
+
+Pourquoi pas ofelia pour les deux : en 0.3.18, un job **`job-run` declare par
+label n'est jamais enregistre** — aucune erreur, il n'apparait simplement pas
+dans les `New job registered` du journal. Et les labels sont lisibles par
+`docker inspect` : la cle secrete du stockage objet n'a rien a y faire.
+
+Les fichiers atterrissent dans `backups/` (ignore par git), d'ou la sauvegarde
+du conteneur les emporte hors machine.
+
+### Tester la restauration
+
+```bash
+./restore-test.sh
+```
+
+Restaure le dernier dump dans une base jetable, compare les effectifs table par
+table avec la production, verifie que PostGIS est bien la, puis supprime la base.
+Une sauvegarde dont on n'a jamais tente la restauration n'est pas une sauvegarde.

@@ -23,6 +23,22 @@ services:
     # Base de l'application : accessible pour les dumps, pas depuis le LAN.
     ports: !override
       - "127.0.0.1:5433:5432"
+    # Les chemins relatifs d'un fichier Compose sont resolus depuis le
+    # REPERTOIRE DE PROJET (src/, celui du premier fichier de COMPOSE_FILE),
+    # pas depuis le fichier qui les ecrit. D'ou le `../` : sans lui, les
+    # sauvegardes atterriraient dans le sous-module.
+    volumes:
+      - ../backups:/backups
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.sauvegarde-db.schedule: "0 30 2 * * *"
+      ofelia.job-exec.sauvegarde-db.no-overlap: "true"
+      ofelia.job-exec.sauvegarde-db.command: >-
+        sh -c 'set -e;
+        pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -Fc
+        -f "/backups/db/qfieldcloud-$$(date +%Y%m%d-%H%M).dump";
+        find /backups/db -name "qfieldcloud-*.dump" -mtime +14 -delete;
+        ls -l /backups/db | tail -3'
     # L'override standalone journalise TOUTES les requetes (log_statement=all).
     command:
       - postgres
@@ -34,6 +50,10 @@ services:
       - shared_buffers=256MB
 
   rustfs:
+    # RETIRE : le stockage objet est sorti de la machine (cluster Garage sur
+    # 10.10.20.21). Les objets ont ete mirroites, `mc diff` est vide, et le
+    # volume `rustfs_data` est conserve quelques jours en repli.
+    profiles: ["never"]
     # L'API S3 ne peut PAS aller sur 127.0.0.1 : l'endpoint_url de STORAGES
     # (http://172.17.0.1:8009) est recopie tel quel dans les URL presignees, que
     # nginx ET les conteneurs QGIS ephemeres doivent pouvoir atteindre. On la
@@ -58,3 +78,20 @@ services:
     # tout cela ne passe par le LAN.
     ports: !override
       - "${WEBDAV_BIND_IP}:${WEBDAV_PUBLIC_PORT}:80"
+
+  certbot:
+    # Le TLS public est termine par le frontal, qui detient un certificat
+    # Let's Encrypt (wildcard *.webgis.allfabox.fr). Ce certbot-la n'a donc
+    # jamais rien a emettre : son /etc/letsencrypt est vide et il boucle sur
+    # `certbot renew` toutes les 12 h pour rien.
+    # `profiles` est une liste : la valeur ci-dessous s'ajoute a celles du
+    # sous-module (il n'en a aucune), et un service porteur d'un profil non
+    # active n'est pas demarre. C'est la facon de RETIRER un service upstream
+    # sans editer une ligne de src/.
+    profiles: ["never"]
+
+  createbuckets:
+    # RETIRE avec rustfs : c'est le seul service qui en dependait. Le bucket
+    # Garage est cree une fois a la main, et la cle applicative porte
+    # `Can create buckets: false` — ce service echouerait de toute facon.
+    profiles: ["never"]
