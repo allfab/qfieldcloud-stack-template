@@ -15,7 +15,8 @@ qui dit si vous avez contracté une dette.
 | `src/` | Sous-module `opengisch/QFieldCloud`, épinglé sur un tag |
 | `.env.template` | Modèle de configuration. **À copier en `.env`**, qui n'est jamais versionné |
 | `docker-compose.override.yml` | Le seul fichier Compose qui vous appartient. Chargé en dernier |
-| `Makefile` | Raccourcis, pour ne plus se demander d'où lancer Compose |
+| `Makefile` | Raccourcis, pour ne plus se demander d'où lancer Compose ni où vivent les scripts |
+| `scripts/` | Sauvegarde du bucket et test de restauration. À appeler par le `Makefile`, pas directement |
 | `.gitignore` | Exclut `.env` — il contient vos secrets |
 
 ## Démarrage, d'un dossier vide à une instance qui répond
@@ -80,7 +81,7 @@ Toutes sont marquées `change_me` ou pointent vers `example.org` dans le templat
 | `LETSENCRYPT_EMAIL` | `LETSENCRYPT_STAGING` reste à `1` tant que le DNS public ne pointe pas ici |
 | `QFIELDCLOUD_ACCOUNT_ADAPTER` | **À ne pas oublier.** Défaut upstream `...AccountAdapterSignUpOpen` : n'importe qui trouvant votre URL peut se créer un compte. `...AccountAdapterSignUpClosed` bascule en mode sur invitation (les invitations continuent de marcher, l'admin Django aussi) |
 | `QFIELDCLOUD_DEFAULT_TIME_ZONE` | Défaut upstream : `Europe/Zurich` |
-| `S3_BACKUP_*` | **Non upstream** : lues uniquement par `./backup-storage.sh`. Voir « Sauvegarde » |
+| `S3_BACKUP_*` | **Non upstream** : lues uniquement par `scripts/backup-storage.sh`. Voir « Sauvegarde » |
 
 ## Les trois pièges qui coûtent une soirée
 
@@ -219,7 +220,18 @@ Deux ordonnanceurs, pour une raison précise :
 | Quoi | Par qui | Quand |
 |---|---|---|
 | `pg_dump -Fc` + purge à 14 jours | **ofelia**, `job-exec` sur `db` (labels de l'override) | 02:30 |
-| miroir du bucket + copie du `.env` | **crontab utilisateur**, `./backup-storage.sh` | 02:45 |
+| miroir du bucket + copie du `.env` | **crontab utilisateur**, `make sauvegarde` | 02:45 |
+
+La ligne de crontab, en absolu puisque cron ne se place nulle part :
+
+```cron
+45 2 * * * make -C /opt/docker/qfieldcloud-stack sauvegarde >> /opt/docker/qfieldcloud-stack/backups/backup-storage.log 2>&1
+```
+
+Elle passe par le `Makefile` et jamais par `scripts/backup-storage.sh` :
+l'emplacement du script reste ainsi un détail interne. Le déplacer ne casserait
+pas une ligne de crontab qui, elle, ne préviendrait personne — elle échouerait à
+2 h 45 dans un fichier de log que personne ne lit.
 
 Pourquoi pas ofelia pour les deux : en 0.3.18, un job **`job-run` déclaré par
 label n'est jamais enregistré** — aucune erreur, il n'apparaît simplement pas
@@ -231,8 +243,8 @@ du conteneur les emporte hors machine.
 
 ### Configurer le miroir du bucket
 
-`backup-storage.sh` lit quatre variables qui n'existent pas chez l'upstream et ne
-servent qu'à lui — l'application, elle, lit `STORAGES` :
+`scripts/backup-storage.sh` lit quatre variables qui n'existent pas chez l'upstream
+et ne servent qu'à lui — l'application, elle, lit `STORAGES` :
 
 | Variable | Valeur |
 |---|---|
@@ -259,7 +271,7 @@ recopie fidèlement. Retirez `--remove` si vous n'avez rien de tel.
 ### Tester la restauration
 
 ```bash
-./restore-test.sh
+make restore-test
 ```
 
 Restaure le dernier dump dans une base jetable, compare les effectifs table par

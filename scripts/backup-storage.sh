@@ -14,7 +14,8 @@
 # D'où ce script, lancé par la crontab de l'utilisateur.
 set -euo pipefail
 
-STACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# La racine du dépôt, pas scripts/ : c'est là que vivent .env et backups/.
+STACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKUP_DIR="${STACK_DIR}/backups"
 RETENTION_DAYS=14
 
