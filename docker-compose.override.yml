@@ -2,6 +2,24 @@
 # Le SEUL fichier Compose qui m'appartient. Charge en dernier (voir COMPOSE_FILE).
 services:
 
+  app:
+    # Ofelia frappe a la porte de django-cron toutes les minutes en amont, ce qui
+    # relance un bootstrap Django complet (~2,7 s de CPU : import de l'app,
+    # connexion DB, init django-axes) 1440 fois par jour pour une instance a
+    # quelques utilisateurs. Sur morpheus, ce pic bref suffit a faire monter le
+    # ventilateur CPU de 2000 a 2400 RPM une fois par minute.
+    #
+    # On espace a l'heure. Chaque classe de CRON_CLASSES garde sa propre
+    # frequence (django-cron ne l'execute que si son delai est ecoule), donc le
+    # seul effet est un RETARD, jusqu'a 1 h, sur :
+    #   - qfieldcloud.send_notifications              (etait : 1 min)
+    #   - qfieldcloud.set_terminated_workers_to_final_status (etait : 3 min)
+    # Ne PAS aller au-dela d'une heure : delete_obsolete_project_packages ne
+    # balaye que les projets modifies dans les 70 dernieres minutes ; a 2 h il
+    # laisserait passer des packages obsoletes definitivement non nettoyes.
+    labels:
+      ofelia.job-exec.runcrons.schedule: "@every 1h"
+
   nginx:
     # Ou publier nginx. Deux cas :
     #  - frontal sur CETTE machine   -> WEB_BIND_IP=127.0.0.1

@@ -142,6 +142,66 @@ Ce depot retire ainsi `certbot` (le TLS est termine par un frontal), puis
 `rustfs` et `createbuckets` (le stockage objet est externalise). Si vous restez
 en profil standalone, enlevez les deux dernieres lignes `profiles`.
 
+## Espacer les taches planifiees
+
+L'upstream fait frapper Ofelia a la porte de django-cron **toutes les minutes** :
+
+```yaml
+ofelia.job-exec.runcrons.schedule: "@every 1m"
+```
+
+Chaque passage relance un bootstrap Django complet — import de l'application,
+connexion a la base, initialisation de django-axes — soit environ **2,7 s de CPU,
+1440 fois par jour**. Sur une instance a quelques utilisateurs et une
+synchronisation par jour, c'est du chauffage. Cela s'entend litteralement : sur
+l'hyperviseur qui heberge cette instance, ce pic faisait monter le ventilateur
+CPU de 2000 a 2400 RPM une fois par minute. La correlation se lit a la seconde
+pres entre les `Finished in "2.7...s"` des logs Ofelia et les releves de
+`sensors`.
+
+L'override espace donc la cadence a l'heure :
+
+```yaml
+  app:
+    labels:
+      ofelia.job-exec.runcrons.schedule: "@every 1h"
+```
+
+Les labels fusionnent par cle : `enabled`, `command` et `no-overlap` restent ceux
+du sous-module, seul `schedule` est remplace. A verifier avec `make config`, ou
+plutot `docker compose --env-file ../.env config | grep ofelia`.
+
+**Ofelia ne degrade aucune tache, il ne fait que retarder.** Chaque classe de
+`CRON_CLASSES` porte sa propre frequence et django-cron ne l'execute que si son
+delai est ecoule. Le seul effet est donc un retard, borne par la cadence Ofelia :
+
+| Tache | `run_every_mins` | Consequence a `@every 1h` |
+|---|---|---|
+| `qfieldcloud.send_notifications` | 1 | notification retardee jusqu'a 1 h |
+| `qfieldcloud.resend_failed_invitations` | 1 | idem |
+| `qfieldcloud.set_terminated_workers_to_final_status` | 3 | un job dont le worker est mort reste `STARTED` jusqu'a 1 h |
+| `qfieldcloud.delete_obsolete_project_packages` | 60 | voir ci-dessous |
+
+**Ne pas aller au-dela d'une heure.** `delete_obsolete_project_packages` ne balaye
+que les projets modifies dans les **70 dernieres minutes**. A `@every 2h`, la
+fenetre ne recouvre plus l'intervalle : les projets modifies dans le trou ne sont
+jamais nettoyes, et leurs packages obsoletes s'accumulent en silence. Le
+worker-wrapper en supprime deja une partie au moment du packaging, mais ce cron
+est le filet de securite — inutile de le trouer.
+
+Le label vit sur le conteneur `app`, et Ofelia relit les labels au demarrage. Il
+faut donc les deux commandes :
+
+```bash
+make up
+cd src && docker compose --env-file ../.env restart ofelia
+docker compose --env-file ../.env logs ofelia | grep "job registered"
+```
+
+La derniere ligne doit annoncer `New job registered "runcrons" ... "@every 1h"`.
+Un `exit code 137` sur le `runcrons` juste avant le redemarrage est normal :
+c'est l'`exec` en cours, tue par la recreation du conteneur `app`.
+
 ## Sauvegarde
 
 Trois choses, et trois seulement :
