@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Miroir local du bucket objet + copie du .env.
 #
-# Pourquoi pas ofelia, alors qu'il ordonnance deja le dump de la base ?
-# Deux raisons, verifiees sur la 0.3.18 :
-#   1. un job `job-run` declare par label n'est JAMAIS enregistre (aucune
-#      erreur, il n'apparait simplement pas dans "New job registered") ;
-#   2. les labels sont lisibles par `docker inspect` : y mettre la cle secrete
-#      du stockage objet reviendrait a la publier a tout le monde sur l'hote.
-# D'ou ce script, lance par la crontab de l'utilisateur.
+# Rien ici n'est propre à un fournisseur : c'est du `mc mirror` S3 standard, qui
+# marche aussi bien sur le rustfs du profil standalone que sur un cluster
+# externe. Seules les quatre variables S3_BACKUP_* changent.
+#
+# Pourquoi pas ofelia, alors qu'il ordonnance déjà le dump de la base ?
+# Deux raisons, vérifiées sur la 0.3.18 :
+#   1. un job `job-run` déclaré par label n'est JAMAIS enregistré (aucune
+#      erreur, il n'apparaît simplement pas dans "New job registered") ;
+#   2. les labels sont lisibles par `docker inspect` : y mettre la clé secrète
+#      du stockage objet reviendrait à la publier à tout le monde sur l'hôte.
+# D'où ce script, lancé par la crontab de l'utilisateur.
 set -euo pipefail
 
 STACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,26 +21,47 @@ RETENTION_DAYS=14
 # shellcheck disable=SC1091
 set -a; source "${STACK_DIR}/.env"; set +a
 
+# Les quatre variables ci-dessous ne servent qu'ici, jamais à l'application.
+# Sans ce garde-fou, une variable oubliée sort en "unbound variable" et une
+# valeur laissée à `change_me` en échec de connexion mc — deux messages qui ne
+# nomment pas le coupable. Voir la section "Sauvegarde du stockage objet" du
+# .env.template, qui donne aussi les valeurs pour le profil standalone.
+manquantes=""
+for v in S3_BACKUP_ENDPOINT S3_BACKUP_ACCESS_KEY S3_BACKUP_SECRET_KEY S3_BACKUP_BUCKET; do
+  valeur="${!v-}"
+  case "${valeur}" in
+    ""|*change_me*) manquantes="${manquantes} ${v}" ;;
+  esac
+done
+if [ -n "${manquantes}" ]; then
+  echo "Sauvegarde du bucket impossible : à renseigner dans .env :${manquantes}" >&2
+  echo "Voir la section \"Sauvegarde du stockage objet\" de .env.template." >&2
+  exit 1
+fi
+
 mkdir -p "${BACKUP_DIR}/storage" "${BACKUP_DIR}/env"
 
-# 1. Le bucket. `--remove` fait du miroir un reflet fidele : un objet supprime
-#    en amont disparait de la copie. C'est voulu — la protection contre la
-#    suppression accidentelle, c'est PBS qui l'assure, avec son historique.
+# 1. Le bucket. `--remove` fait du miroir un reflet fidèle : un objet supprimé
+#    en amont disparaît de la copie. C'est voulu, mais cela suppose que QUELQUE
+#    CHOSE garde un historique de ce dossier — ici PBS, qui sauvegarde le
+#    conteneur. Sans cet historique derrière, ce miroir ne protège PAS d'une
+#    suppression accidentelle : il la recopie fidèlement. Retirez `--remove`
+#    si vous n'avez rien de tel.
 docker run --rm \
   -v "${BACKUP_DIR}/storage:/mirror" \
   --entrypoint sh minio/mc:latest -c "
-    mc alias set garage '${GARAGE_BACKUP_ENDPOINT}' '${GARAGE_BACKUP_ACCESS_KEY}' '${GARAGE_BACKUP_SECRET_KEY}' --api S3v4 >/dev/null
-    mc mirror --overwrite --remove 'garage/${GARAGE_BACKUP_BUCKET}' /mirror
+    mc alias set backup '${S3_BACKUP_ENDPOINT}' '${S3_BACKUP_ACCESS_KEY}' '${S3_BACKUP_SECRET_KEY}' --api S3v4 >/dev/null
+    mc mirror --overwrite --remove 'backup/${S3_BACKUP_BUCKET}' /mirror
     mc du /mirror
   "
 
-# 2. Le .env. Sans SECRET_KEY et SALT_KEY, les champs chiffres de la base
-#    restituee sont illisibles : la sauvegarde des deux autres ne vaut rien
+# 2. Le .env. Sans SECRET_KEY et SALT_KEY, les champs chiffrés de la base
+#    restituée sont illisibles : la sauvegarde des deux autres ne vaut rien
 #    sans celle-ci.
 install -m 600 "${STACK_DIR}/.env" "${BACKUP_DIR}/env/env-$(date +%Y%m%d-%H%M)"
 find "${BACKUP_DIR}/env" -name 'env-*' -mtime "+${RETENTION_DAYS}" -delete
 
-# 3. Un etat lisible, pour que la supervision ait quelque chose a regarder.
+# 3. Un état lisible, pour que la supervision ait quelque chose à regarder.
 {
   echo "date        : $(date -Is)"
   echo "objets      : $(find "${BACKUP_DIR}/storage" -type f | wc -l)"

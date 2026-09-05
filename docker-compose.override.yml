@@ -1,37 +1,37 @@
 # /opt/docker/qfieldcloud-stack/docker-compose.override.yml
-# Le SEUL fichier Compose qui m'appartient. Charge en dernier (voir COMPOSE_FILE).
+# Le SEUL fichier Compose qui m'appartient. Chargé en dernier (voir COMPOSE_FILE).
 services:
 
   app:
-    # Ofelia frappe a la porte de django-cron toutes les minutes en amont, ce qui
+    # Ofelia frappe à la porte de django-cron toutes les minutes en amont, ce qui
     # relance un bootstrap Django complet (~2,7 s de CPU : import de l'app,
-    # connexion DB, init django-axes) 1440 fois par jour pour une instance a
-    # quelques utilisateurs. Sur morpheus, ce pic bref suffit a faire monter le
-    # ventilateur CPU de 2000 a 2400 RPM une fois par minute.
+    # connexion DB, init django-axes) 1440 fois par jour pour une instance à
+    # quelques utilisateurs. Sur morpheus, ce pic bref suffit à faire monter le
+    # ventilateur CPU de 2000 à 2400 RPM une fois par minute.
     #
-    # On espace a l'heure. Chaque classe de CRON_CLASSES garde sa propre
-    # frequence (django-cron ne l'execute que si son delai est ecoule), donc le
-    # seul effet est un RETARD, jusqu'a 1 h, sur :
-    #   - qfieldcloud.send_notifications              (etait : 1 min)
-    #   - qfieldcloud.set_terminated_workers_to_final_status (etait : 3 min)
-    # Ne PAS aller au-dela d'une heure : delete_obsolete_project_packages ne
-    # balaye que les projets modifies dans les 70 dernieres minutes ; a 2 h il
-    # laisserait passer des packages obsoletes definitivement non nettoyes.
+    # On espace à l'heure. Chaque classe de CRON_CLASSES garde sa propre
+    # fréquence (django-cron ne l'exécute que si son délai est écoulé), donc le
+    # seul effet est un RETARD, jusqu'à 1 h, sur :
+    #   - qfieldcloud.send_notifications                     (était : 1 min)
+    #   - qfieldcloud.set_terminated_workers_to_final_status  (était : 3 min)
+    # Ne PAS aller au-delà d'une heure : delete_obsolete_project_packages ne
+    # balaye que les projets modifiés dans les 70 dernières minutes ; à 2 h il
+    # laisserait passer des packages obsolètes définitivement non nettoyés.
     labels:
       ofelia.job-exec.runcrons.schedule: "@every 1h"
 
   nginx:
-    # Ou publier nginx. Deux cas :
-    #  - frontal sur CETTE machine   -> WEB_BIND_IP=127.0.0.1
-    #  - frontal sur une AUTRE machine -> WEB_BIND_IP=<IP de cet hote>
-    # On evite 0.0.0.0, qui ferait ecouter nginx jusque sur les bridges Docker.
-    # Le port clair reste sur loopback : personne n'a a l'atteindre de l'exterieur.
+    # Où publier nginx. Deux cas :
+    #  - frontal sur CETTE machine     -> WEB_BIND_IP=127.0.0.1
+    #  - frontal sur une AUTRE machine -> WEB_BIND_IP=<IP de cet hôte>
+    # On évite 0.0.0.0, qui ferait écouter nginx jusque sur les bridges Docker.
+    # Le port clair reste sur loopback : personne n'a à l'atteindre de l'extérieur.
     ports: !override
       - "127.0.0.1:${WEB_HTTP_PORT}:80"
       - "${WEB_BIND_IP}:${WEB_HTTPS_PORT}:443"
-    # Les conteneurs QGIS ephemeres rappellent l'API pour telecharger les fichiers
+    # Les conteneurs QGIS éphémères rappellent l'API pour télécharger les fichiers
     # du projet, et doivent passer par nginx (X-Accel-Redirect). Or nginx n'accepte
-    # qu'un seul en-tete Host : QFIELDCLOUD_HOST. On lui donne ce nom sur le reseau.
+    # qu'un seul en-tête Host : QFIELDCLOUD_HOST. On lui donne ce nom sur le réseau.
     networks:
       default:
         aliases:
@@ -41,9 +41,9 @@ services:
     # Base de l'application : accessible pour les dumps, pas depuis le LAN.
     ports: !override
       - "127.0.0.1:5433:5432"
-    # Les chemins relatifs d'un fichier Compose sont resolus depuis le
-    # REPERTOIRE DE PROJET (src/, celui du premier fichier de COMPOSE_FILE),
-    # pas depuis le fichier qui les ecrit. D'ou le `../` : sans lui, les
+    # Les chemins relatifs d'un fichier Compose sont résolus depuis le
+    # RÉPERTOIRE DE PROJET (src/, celui du premier fichier de COMPOSE_FILE),
+    # pas depuis le fichier qui les écrit. D'où le `../` : sans lui, les
     # sauvegardes atterriraient dans le sous-module.
     volumes:
       - ../backups:/backups
@@ -57,7 +57,7 @@ services:
         -f "/backups/db/qfieldcloud-$$(date +%Y%m%d-%H%M).dump";
         find /backups/db -name "qfieldcloud-*.dump" -mtime +14 -delete;
         ls -l /backups/db | tail -3'
-    # L'override standalone journalise TOUTES les requetes (log_statement=all).
+    # L'override standalone journalise TOUTES les requêtes (log_statement=all).
     command:
       - postgres
       - -c
@@ -68,22 +68,22 @@ services:
       - shared_buffers=256MB
 
   rustfs:
-    # RETIRE : le stockage objet est sorti de la machine (cluster Garage sur
-    # 10.10.20.21). Les objets ont ete mirroites, `mc diff` est vide, et le
-    # volume `rustfs_data` est conserve quelques jours en repli.
+    # RETIRÉ : le stockage objet est sorti de la machine (cluster Garage sur
+    # 10.10.20.21). Les objets ont été miroités, `mc diff` est vide, et le
+    # volume `rustfs_data` est conservé quelques jours en repli.
     profiles: ["never"]
     # L'API S3 ne peut PAS aller sur 127.0.0.1 : l'endpoint_url de STORAGES
-    # (http://172.17.0.1:8009) est recopie tel quel dans les URL presignees, que
-    # nginx ET les conteneurs QGIS ephemeres doivent pouvoir atteindre. On la
+    # (http://172.17.0.1:8009) est recopié tel quel dans les URL présignées, que
+    # nginx ET les conteneurs QGIS éphémères doivent pouvoir atteindre. On la
     # publie donc sur la passerelle docker0 : joignable de tout conteneur et de
-    # l'hote, invisible depuis le LAN. La console web, elle, reste sur loopback.
+    # l'hôte, invisible depuis le LAN. La console web, elle, reste sur loopback.
     ports: !override
       - "${STORAGE_API_BIND_IP}:${OBJECT_STORAGE_API_PORT}:9000"
       - "${STORAGE_CONSOLE_BIND_IP}:${OBJECT_STORAGE_BROWSER_PORT}:9001"
 
   smtp4dev:
-    # Piege a courriels de developpement : il n'envoie rien et ne doit rien
-    # recevoir de l'exterieur. L'application l'atteint par le reseau Compose
+    # Piège à courriels de développement : il n'envoie rien et ne doit rien
+    # recevoir de l'extérieur. L'application l'atteint par le réseau Compose
     # (EMAIL_HOST=smtp4dev), pas par ces ports.
     ports: !override
       - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_WEB_PORT}:80"
@@ -91,25 +91,25 @@ services:
       - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_IMAP_PORT}:143"
 
   webdav:
-    # Meme logique que rustfs : s'il sert un jour de stockage d'attachements,
-    # c'est WEBDAV_SERVER_NAMES ("172.17.0.1,webdav") qui dit par ou. Rien de
+    # Même logique que rustfs : s'il sert un jour de stockage d'attachements,
+    # c'est WEBDAV_SERVER_NAMES ("172.17.0.1,webdav") qui dit par où. Rien de
     # tout cela ne passe par le LAN.
     ports: !override
       - "${WEBDAV_BIND_IP}:${WEBDAV_PUBLIC_PORT}:80"
 
   certbot:
-    # Le TLS public est termine par le frontal, qui detient un certificat
-    # Let's Encrypt (wildcard *.webgis.allfabox.fr). Ce certbot-la n'a donc
-    # jamais rien a emettre : son /etc/letsencrypt est vide et il boucle sur
+    # Le TLS public est terminé par le frontal, qui détient un certificat
+    # Let's Encrypt (wildcard *.webgis.allfabox.fr). Ce certbot-là n'a donc
+    # jamais rien à émettre : son /etc/letsencrypt est vide et il boucle sur
     # `certbot renew` toutes les 12 h pour rien.
-    # `profiles` est une liste : la valeur ci-dessous s'ajoute a celles du
+    # `profiles` est une liste : la valeur ci-dessous s'ajoute à celles du
     # sous-module (il n'en a aucune), et un service porteur d'un profil non
-    # active n'est pas demarre. C'est la facon de RETIRER un service upstream
-    # sans editer une ligne de src/.
+    # activé n'est pas démarré. C'est la façon de RETIRER un service upstream
+    # sans éditer une ligne de src/.
     profiles: ["never"]
 
   createbuckets:
-    # RETIRE avec rustfs : c'est le seul service qui en dependait. Le bucket
-    # Garage est cree une fois a la main, et la cle applicative porte
-    # `Can create buckets: false` — ce service echouerait de toute facon.
+    # RETIRÉ avec rustfs : c'est le seul service qui en dépendait. Le bucket
+    # Garage est créé une fois à la main, et la clé applicative porte
+    # `Can create buckets: false` — ce service échouerait de toute façon.
     profiles: ["never"]

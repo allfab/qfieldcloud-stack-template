@@ -1,10 +1,12 @@
-# Toutes les commandes Compose se lancent depuis src/ : voir l'article precedent.
+# Toutes les commandes Compose se lancent depuis src/ : voir l'article précédent.
 COMPOSE = cd src && docker compose --env-file ../.env
 
-# check_envvars.py analyse le DOSSIER src/, pas la chaine COMPOSE_FILE. Il ignore
+# check_envvars.py analyse le DOSSIER src/, pas la chaîne COMPOSE_FILE. Il ignore
 # donc ../docker-compose.override.yml et signale WEB_BIND_IP comme orpheline, alors
-# qu'elle y est bien utilisee. DEBUG_QGIS_WORKER_HOST_PATH, elle, est sans emploi.
-IGNORED_VARS = DEBUG_QGIS_WORKER_HOST_PATH WEB_BIND_IP STORAGE_API_BIND_IP STORAGE_CONSOLE_BIND_IP SMTP4DEV_BIND_IP WEBDAV_BIND_IP GARAGE_BACKUP_ENDPOINT GARAGE_BACKUP_ACCESS_KEY GARAGE_BACKUP_SECRET_KEY GARAGE_BACKUP_BUCKET
+# qu'elle y est bien utilisée. Les S3_BACKUP_* ne sont lues que par
+# ./backup-storage.sh, qui n'est pas un fichier Compose : même cas de figure.
+# DEBUG_QGIS_WORKER_HOST_PATH, elle, est sans emploi.
+IGNORED_VARS = DEBUG_QGIS_WORKER_HOST_PATH WEB_BIND_IP STORAGE_API_BIND_IP STORAGE_CONSOLE_BIND_IP SMTP4DEV_BIND_IP WEBDAV_BIND_IP S3_BACKUP_ENDPOINT S3_BACKUP_ACCESS_KEY S3_BACKUP_SECRET_KEY S3_BACKUP_BUCKET
 
 .PHONY: up down config ps logs migrate check
 

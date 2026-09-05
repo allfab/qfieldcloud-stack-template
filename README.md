@@ -1,32 +1,32 @@
-# qfieldcloud-stack — squelette de deploiement QFieldCloud
+# qfieldcloud-stack — squelette de déploiement QFieldCloud
 
-Depot **template** pour monter une instance QFieldCloud auto-hebergee sans jamais
-modifier une ligne du depot upstream.
+Dépôt **template** pour monter une instance QFieldCloud auto-hébergée sans jamais
+modifier une ligne du dépôt upstream.
 
 Le principe tient en une phrase : `opengisch/QFieldCloud` est un **sous-module**
-epingle sur un tag, en lecture seule ; tout ce qui vous appartient vit ici, un cran
-au-dessus. `git -C src status` doit rester vide en permanence — c'est le controle
-qui dit si vous avez contracte une dette.
+épinglé sur un tag, en lecture seule ; tout ce qui vous appartient vit ici, un cran
+au-dessus. `git -C src status` doit rester vide en permanence — c'est le contrôle
+qui dit si vous avez contracté une dette.
 
-## Ce que contient ce depot
+## Ce que contient ce dépôt
 
-| Fichier | Role |
+| Fichier | Rôle |
 |---|---|
-| `src/` | Sous-module `opengisch/QFieldCloud`, epingle sur un tag |
-| `.env.template` | Modele de configuration. **A copier en `.env`**, qui n'est jamais versionne |
-| `docker-compose.override.yml` | Le seul fichier Compose qui vous appartient. Charge en dernier |
-| `Makefile` | Raccourcis, pour ne plus se demander d'ou lancer Compose |
+| `src/` | Sous-module `opengisch/QFieldCloud`, épinglé sur un tag |
+| `.env.template` | Modèle de configuration. **À copier en `.env`**, qui n'est jamais versionné |
+| `docker-compose.override.yml` | Le seul fichier Compose qui vous appartient. Chargé en dernier |
+| `Makefile` | Raccourcis, pour ne plus se demander d'où lancer Compose |
 | `.gitignore` | Exclut `.env` — il contient vos secrets |
 
-## Demarrage, d'un dossier vide a une instance qui repond
+## Démarrage, d'un dossier vide à une instance qui répond
 
-Si vous etes passe par le bouton **« Use this template »**, votre depot est deja vierge :
-clonez-le et sautez l'etape 0.
+Si vous êtes passé par le bouton **« Use this template »**, votre dépôt est déjà vierge :
+clonez-le et sautez l'étape 0.
 
 ```bash
-# 0. Repartir d'un historique a vous
-#    Les commits de ce depot racontent MON instance (mon frontal, mes IP). Le votre
-#    doit raconter la votre : c'est tout l'interet du montage.
+# 0. Repartir d'un historique à vous
+#    Les commits de ce dépôt racontent MON instance (mon frontal, mes IP). Le vôtre
+#    doit raconter la vôtre : c'est tout l'intérêt du montage.
 git clone https://github.com/allfab/qfieldcloud-stack-template.git qfieldcloud-stack
 cd qfieldcloud-stack
 rm -rf .git src        # src/.git pointe dans .git/modules/ : les deux partent ensemble
@@ -36,16 +36,16 @@ git init
 git submodule add -b release https://github.com/opengisch/QFieldCloud.git src
 git -C src checkout v26.26          # choisissez le tag, ne restez pas sur une branche
 
-# 2. Les dossiers que Docker creerait en root si on ne le prenait pas de vitesse
+# 2. Les dossiers que Docker créerait en root si on ne le prenait pas de vitesse
 mkdir -p src/conf/certbot src/conf/nginx/config.d
 
 # 3. Votre configuration
 cp .env.template .env
-$EDITOR .env                        # voir « Les variables a changer » ci-dessous
+$EDITOR .env                        # voir « Les variables à changer » ci-dessous
 make check                          # valide le .env contre les fichiers Compose
-make config                         # valide la configuration Compose fusionnee
+make config                         # valide la configuration Compose fusionnée
 
-# 4. Les images QGIS, une par une : elles sont enormes
+# 4. Les images QGIS, une par une : elles sont énormes
 cd src
 alias dc='docker compose --env-file ../.env'
 dc build qgis3 && docker builder prune -f && df -h /
@@ -63,46 +63,47 @@ dc exec app python manage.py createsuperuser
 
 Au premier `up`, quatre services sortent en `Exited (0)` — c'est normal, ils ont fait
 leur travail — et `worker_wrapper` boucle sur `relation "project_project" does not
-exist` jusqu'au `migrate`. Voir la section « pieges » plus bas.
+exist` jusqu'au `migrate`. Voir la section « pièges » plus bas.
 
-## Les variables a changer
+## Les variables à changer
 
-Toutes sont marquees `change_me` ou pointent vers `example.org` dans le template.
+Toutes sont marquées `change_me` ou pointent vers `example.org` dans le template.
 
 | Variable | Remarque |
 |---|---|
-| `QFIELDCLOUD_HOST` | Sans schema, sans port, sans slash |
+| `QFIELDCLOUD_HOST` | Sans schéma, sans port, sans slash |
 | `DJANGO_ALLOWED_HOSTS` | Doit contenir `QFIELDCLOUD_HOST` |
-| `SECRET_KEY`, `SALT_KEY` | 64 caracteres tires au sort. **Sans eux, les champs chiffres de la base sont perdus** : ils font partie de votre sauvegarde |
+| `SECRET_KEY`, `SALT_KEY` | 64 caractères tirés au sort. **Sans eux, les champs chiffrés de la base sont perdus** : ils font partie de votre sauvegarde |
 | `POSTGRES_PASSWORD`, `OBJECT_STORAGE_ROOT_*`, `WEBDAV_PASSWORD` | idem |
-| `STORAGES` | `access_key`/`secret_key` doivent etre alignes sur `OBJECT_STORAGE_ROOT_*`, sinon `createbuckets` echoue |
-| `WEB_BIND_IP` | **Non upstream** : ou publier le port HTTPS. `127.0.0.1` si le frontal est sur cette machine, l'IP de l'hote s'il est ailleurs |
-| `LETSENCRYPT_EMAIL` | `LETSENCRYPT_STAGING` reste a `1` tant que le DNS public ne pointe pas ici |
-| `QFIELDCLOUD_ACCOUNT_ADAPTER` | **A ne pas oublier.** Defaut upstream `...AccountAdapterSignUpOpen` : n'importe qui trouvant votre URL peut se creer un compte. `...AccountAdapterSignUpClosed` bascule en mode sur invitation (les invitations continuent de marcher, l'admin Django aussi) |
-| `QFIELDCLOUD_DEFAULT_TIME_ZONE` | Defaut upstream : `Europe/Zurich` |
+| `STORAGES` | `access_key`/`secret_key` doivent être alignés sur `OBJECT_STORAGE_ROOT_*`, sinon `createbuckets` échoue |
+| `WEB_BIND_IP` | **Non upstream** : où publier le port HTTPS. `127.0.0.1` si le frontal est sur cette machine, l'IP de l'hôte s'il est ailleurs |
+| `LETSENCRYPT_EMAIL` | `LETSENCRYPT_STAGING` reste à `1` tant que le DNS public ne pointe pas ici |
+| `QFIELDCLOUD_ACCOUNT_ADAPTER` | **À ne pas oublier.** Défaut upstream `...AccountAdapterSignUpOpen` : n'importe qui trouvant votre URL peut se créer un compte. `...AccountAdapterSignUpClosed` bascule en mode sur invitation (les invitations continuent de marcher, l'admin Django aussi) |
+| `QFIELDCLOUD_DEFAULT_TIME_ZONE` | Défaut upstream : `Europe/Zurich` |
+| `S3_BACKUP_*` | **Non upstream** : lues uniquement par `./backup-storage.sh`. Voir « Sauvegarde » |
 
-## Les trois pieges qui coutent une soiree
+## Les trois pièges qui coûtent une soirée
 
-**1. `COMPOSE_FILE` livre par l'upstream est un profil de developpement.** Le template
+**1. `COMPOSE_FILE` livré par l'upstream est un profil de développement.** Le template
 charge `standalone` + `prod` + votre override :
 
 ```
 COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.prod.yml:../docker-compose.override.yml
 ```
 
-Les trois premiers appartiennent au sous-module et seront remplaces a l'identique au
-prochain `git checkout`. Le quatrieme est a vous, d'ou le `../`.
+Les trois premiers appartiennent au sous-module et seront remplacés à l'identique au
+prochain `git checkout`. Le quatrième est à vous, d'où le `../`.
 
-**2. En `DEBUG=0`, les workers doivent passer par nginx.** Le defaut upstream
+**2. En `DEBUG=0`, les workers doivent passer par nginx.** Le défaut upstream
 `QFIELDCLOUD_WORKER_QFIELDCLOUD_URL=http://app:8000/api/v1/` court-circuite nginx,
-donc pas de `X-Forwarded-For`, donc `500` sur **tous** les telechargements de fichiers
+donc pas de `X-Forwarded-For`, donc `500` sur **tous** les téléchargements de fichiers
 de projet. Le template corrige cela avec trois choses qui vont ensemble :
-`NGINX_ALLOW_INTERNAL_HTTP=1`, un alias reseau `${QFIELDCLOUD_HOST}` sur `nginx` dans
+`NGINX_ALLOW_INTERNAL_HTTP=1`, un alias réseau `${QFIELDCLOUD_HOST}` sur `nginx` dans
 l'override, et l'URL du worker qui passe par ce nom.
 
-**3. `SMTP4DEV_SMTP_PORT` vaut `25` par defaut** et smtp4dev publie ce port sur toutes
-les interfaces. Sur une Debian avec un agent de transport local, le demarrage echoue
-sur un `address already in use` qui ne nomme pas le coupable. Verifiez avec
+**3. `SMTP4DEV_SMTP_PORT` vaut `25` par défaut** et smtp4dev publie ce port sur toutes
+les interfaces. Sur une Debian avec un agent de transport local, le démarrage échoue
+sur un `address already in use` qui ne nomme pas le coupable. Vérifiez avec
 `ss -tlnp | grep ':25 '`.
 
 ## Monter de version
@@ -113,11 +114,11 @@ git -C src checkout v26.27
 make check && make config
 make up
 cd src && docker compose --env-file ../.env exec app python manage.py migrate
-git add src && git commit -m "Montee en v26.27"
+git add src && git commit -m "Montée en v26.27"
 ```
 
 Le commit ne contient qu'un changement de pointeur de sous-module. C'est tout
-l'interet du montage : rien a reporter a la main.
+l'intérêt du montage : rien à reporter à la main.
 
 ## Retirer un service upstream
 
@@ -129,37 +130,37 @@ personne n'active, depuis `docker-compose.override.yml`.
     profiles: ["never"]
 ```
 
-Le service disparait de `docker compose config --services`. Mais **`up -d
---remove-orphans` ne supprime pas le conteneur deja en marche** : Compose ne
-considere pas comme orpheline une instance simplement exclue par un profil. Il
-faut la nommer, en reactivant le profil le temps de la commande :
+Le service disparaît de `docker compose config --services`. Mais **`up -d
+--remove-orphans` ne supprime pas le conteneur déjà en marche** : Compose ne
+considère pas comme orpheline une instance simplement exclue par un profil. Il
+faut la nommer, en réactivant le profil le temps de la commande :
 
 ```bash
 docker compose --env-file ../.env --profile never rm -sf certbot
 ```
 
-Ce depot retire ainsi `certbot` (le TLS est termine par un frontal), puis
-`rustfs` et `createbuckets` (le stockage objet est externalise). Si vous restez
-en profil standalone, enlevez les deux dernieres lignes `profiles`.
+Ce dépôt retire ainsi `certbot` (le TLS est terminé par un frontal), puis
+`rustfs` et `createbuckets` (le stockage objet est externalisé). Si vous restez
+en profil standalone, enlevez les deux dernières lignes `profiles`.
 
-## Espacer les taches planifiees
+## Espacer les tâches planifiées
 
-L'upstream fait frapper Ofelia a la porte de django-cron **toutes les minutes** :
+L'upstream fait frapper Ofelia à la porte de django-cron **toutes les minutes** :
 
 ```yaml
 ofelia.job-exec.runcrons.schedule: "@every 1m"
 ```
 
 Chaque passage relance un bootstrap Django complet — import de l'application,
-connexion a la base, initialisation de django-axes — soit environ **2,7 s de CPU,
-1440 fois par jour**. Sur une instance a quelques utilisateurs et une
-synchronisation par jour, c'est du chauffage. Cela s'entend litteralement : sur
-l'hyperviseur qui heberge cette instance, ce pic faisait monter le ventilateur
-CPU de 2000 a 2400 RPM une fois par minute. La correlation se lit a la seconde
-pres entre les `Finished in "2.7...s"` des logs Ofelia et les releves de
+connexion à la base, initialisation de django-axes — soit environ **2,7 s de CPU,
+1440 fois par jour**. Sur une instance à quelques utilisateurs et une
+synchronisation par jour, c'est du chauffage. Cela s'entend littéralement : sur
+l'hyperviseur qui héberge cette instance, ce pic faisait monter le ventilateur
+CPU de 2000 à 2400 RPM une fois par minute. La corrélation se lit à la seconde
+près entre les `Finished in "2.7...s"` des logs Ofelia et les relevés de
 `sensors`.
 
-L'override espace donc la cadence a l'heure :
+L'override espace donc la cadence à l'heure :
 
 ```yaml
   app:
@@ -167,29 +168,29 @@ L'override espace donc la cadence a l'heure :
       ofelia.job-exec.runcrons.schedule: "@every 1h"
 ```
 
-Les labels fusionnent par cle : `enabled`, `command` et `no-overlap` restent ceux
-du sous-module, seul `schedule` est remplace. A verifier avec `make config`, ou
-plutot `docker compose --env-file ../.env config | grep ofelia`.
+Les labels fusionnent par clé : `enabled`, `command` et `no-overlap` restent ceux
+du sous-module, seul `schedule` est remplacé. À vérifier avec `make config`, ou
+plutôt `docker compose --env-file ../.env config | grep ofelia`.
 
-**Ofelia ne degrade aucune tache, il ne fait que retarder.** Chaque classe de
-`CRON_CLASSES` porte sa propre frequence et django-cron ne l'execute que si son
-delai est ecoule. Le seul effet est donc un retard, borne par la cadence Ofelia :
+**Ofelia ne dégrade aucune tâche, il ne fait que retarder.** Chaque classe de
+`CRON_CLASSES` porte sa propre fréquence et django-cron ne l'exécute que si son
+délai est écoulé. Le seul effet est donc un retard, borné par la cadence Ofelia :
 
-| Tache | `run_every_mins` | Consequence a `@every 1h` |
+| Tâche | `run_every_mins` | Conséquence à `@every 1h` |
 |---|---|---|
-| `qfieldcloud.send_notifications` | 1 | notification retardee jusqu'a 1 h |
+| `qfieldcloud.send_notifications` | 1 | notification retardée jusqu'à 1 h |
 | `qfieldcloud.resend_failed_invitations` | 1 | idem |
-| `qfieldcloud.set_terminated_workers_to_final_status` | 3 | un job dont le worker est mort reste `STARTED` jusqu'a 1 h |
+| `qfieldcloud.set_terminated_workers_to_final_status` | 3 | un job dont le worker est mort reste `STARTED` jusqu'à 1 h |
 | `qfieldcloud.delete_obsolete_project_packages` | 60 | voir ci-dessous |
 
-**Ne pas aller au-dela d'une heure.** `delete_obsolete_project_packages` ne balaye
-que les projets modifies dans les **70 dernieres minutes**. A `@every 2h`, la
-fenetre ne recouvre plus l'intervalle : les projets modifies dans le trou ne sont
-jamais nettoyes, et leurs packages obsoletes s'accumulent en silence. Le
-worker-wrapper en supprime deja une partie au moment du packaging, mais ce cron
-est le filet de securite — inutile de le trouer.
+**Ne pas aller au-delà d'une heure.** `delete_obsolete_project_packages` ne balaye
+que les projets modifiés dans les **70 dernières minutes**. À `@every 2h`, la
+fenêtre ne recouvre plus l'intervalle : les projets modifiés dans le trou ne sont
+jamais nettoyés, et leurs packages obsolètes s'accumulent en silence. Le
+worker-wrapper en supprime déjà une partie au moment du packaging, mais ce cron
+est le filet de sécurité — inutile de le trouer.
 
-Le label vit sur le conteneur `app`, et Ofelia relit les labels au demarrage. Il
+Le label vit sur le conteneur `app`, et Ofelia relit les labels au démarrage. Il
 faut donc les deux commandes :
 
 ```bash
@@ -198,9 +199,9 @@ cd src && docker compose --env-file ../.env restart ofelia
 docker compose --env-file ../.env logs ofelia | grep "job registered"
 ```
 
-La derniere ligne doit annoncer `New job registered "runcrons" ... "@every 1h"`.
-Un `exit code 137` sur le `runcrons` juste avant le redemarrage est normal :
-c'est l'`exec` en cours, tue par la recreation du conteneur `app`.
+La dernière ligne doit annoncer `New job registered "runcrons" ... "@every 1h"`.
+Un `exit code 137` sur le `runcrons` juste avant le redémarrage est normal :
+c'est l'`exec` en cours, tué par la recréation du conteneur `app`.
 
 ## Sauvegarde
 
@@ -209,24 +210,51 @@ Trois choses, et trois seulement :
 - la base — `pg_dump` logique ;
 - le bucket du stockage objet — miroir S3 ;
 - le `.env`, sans lequel les deux premiers sont inexploitables (`SECRET_KEY` et
-  `SALT_KEY` dechiffrent les champs chiffres de la base).
+  `SALT_KEY` déchiffrent les champs chiffrés de la base).
 
-Les grilles PROJ (~850 Mo) et les images sont integralement reconstructibles.
+Les grilles PROJ (~850 Mo) et les images sont intégralement reconstructibles.
 
-Deux ordonnanceurs, pour une raison precise :
+Deux ordonnanceurs, pour une raison précise :
 
 | Quoi | Par qui | Quand |
 |---|---|---|
-| `pg_dump -Fc` + purge a 14 jours | **ofelia**, `job-exec` sur `db` (labels de l'override) | 02:30 |
+| `pg_dump -Fc` + purge à 14 jours | **ofelia**, `job-exec` sur `db` (labels de l'override) | 02:30 |
 | miroir du bucket + copie du `.env` | **crontab utilisateur**, `./backup-storage.sh` | 02:45 |
 
-Pourquoi pas ofelia pour les deux : en 0.3.18, un job **`job-run` declare par
-label n'est jamais enregistre** — aucune erreur, il n'apparait simplement pas
+Pourquoi pas ofelia pour les deux : en 0.3.18, un job **`job-run` déclaré par
+label n'est jamais enregistré** — aucune erreur, il n'apparaît simplement pas
 dans les `New job registered` du journal. Et les labels sont lisibles par
-`docker inspect` : la cle secrete du stockage objet n'a rien a y faire.
+`docker inspect` : la clé secrète du stockage objet n'a rien à y faire.
 
-Les fichiers atterrissent dans `backups/` (ignore par git), d'ou la sauvegarde
+Les fichiers atterrissent dans `backups/` (ignoré par git), d'où la sauvegarde
 du conteneur les emporte hors machine.
+
+### Configurer le miroir du bucket
+
+`backup-storage.sh` lit quatre variables qui n'existent pas chez l'upstream et ne
+servent qu'à lui — l'application, elle, lit `STORAGES` :
+
+| Variable | Valeur |
+|---|---|
+| `S3_BACKUP_ENDPOINT` | URL de l'API S3 |
+| `S3_BACKUP_ACCESS_KEY`, `S3_BACKUP_SECRET_KEY` | Une clé en lecture suffit |
+| `S3_BACKUP_BUCKET` | Le `bucket_name` de `STORAGES` |
+
+Rien là-dedans n'est propre à un fournisseur : c'est du `mc mirror` standard. **En
+profil standalone** (rustfs embarqué), pointez l'endpoint sur
+`${STORAGE_API_BIND_IP}:${OBJECT_STORAGE_API_PORT}` et réutilisez
+`OBJECT_STORAGE_ROOT_USER` / `OBJECT_STORAGE_ROOT_PASSWORD`. Le script refuse de
+démarrer, en nommant les variables fautives, si l'une manque ou est restée à
+`change_me`.
+
+Ces quatre variables figurent dans `IGNORED_VARS` du `Makefile` : `check_envvars.py`
+n'analyse que les fichiers Compose et les signalerait comme orphelines.
+
+**Le miroir tourne avec `--remove`** : un objet supprimé en amont disparaît de la
+copie au passage suivant. C'est voulu, mais cela suppose que quelque chose garde
+un historique de `backups/` — ici la sauvegarde du conteneur. Sans cet historique
+derrière, ce miroir ne protège **pas** d'une suppression accidentelle : il la
+recopie fidèlement. Retirez `--remove` si vous n'avez rien de tel.
 
 ### Tester la restauration
 
@@ -235,5 +263,5 @@ du conteneur les emporte hors machine.
 ```
 
 Restaure le dernier dump dans une base jetable, compare les effectifs table par
-table avec la production, verifie que PostGIS est bien la, puis supprime la base.
-Une sauvegarde dont on n'a jamais tente la restauration n'est pas une sauvegarde.
+table avec la production, vérifie que PostGIS est bien là, puis supprime la base.
+Une sauvegarde dont on n'a jamais tenté la restauration n'est pas une sauvegarde.
