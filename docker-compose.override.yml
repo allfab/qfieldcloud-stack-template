@@ -110,10 +110,16 @@ services:
     # Piège à courriels de développement : il n'envoie rien et ne doit rien
     # recevoir de l'extérieur. L'application l'atteint par le réseau Compose
     # (EMAIL_HOST=smtp4dev), pas par ces ports.
+    #
+    # Seule l'interface WEB peut sortir sur le LAN, via sa propre variable : elle
+    # est la seule qu'on ait une raison de consulter depuis un navigateur. SMTP et
+    # IMAP restent sur le loopback en dur — l'IMAP donne accès aux mêmes messages
+    # que l'interface, et le SMTP accepterait n'importe quel envoi. Une seule
+    # porte au lieu de trois, pour le même service rendu.
     ports: !override
-      - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_WEB_PORT}:80"
-      - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_SMTP_PORT}:25"
-      - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_IMAP_PORT}:143"
+      - "${SMTP4DEV_WEB_BIND_IP}:${SMTP4DEV_WEB_PORT}:80"
+      - "127.0.0.1:${SMTP4DEV_SMTP_PORT}:25"
+      - "127.0.0.1:${SMTP4DEV_IMAP_PORT}:143"
     logging: *logging-cap
 
   webdav:

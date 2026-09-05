@@ -89,6 +89,7 @@ Toutes sont marquées `change_me` ou pointent vers `example.org` dans le templat
 | `QFIELDCLOUD_ACCOUNT_ADAPTER` | **À ne pas oublier.** Défaut upstream `...AccountAdapterSignUpOpen` : n'importe qui trouvant votre URL peut se créer un compte. `...AccountAdapterSignUpClosed` bascule en mode sur invitation (les invitations continuent de marcher, l'admin Django aussi) |
 | `QFIELDCLOUD_DEFAULT_TIME_ZONE` | Défaut upstream : `Europe/Zurich` |
 | `S3_BACKUP_*` | **Non upstream** : lues uniquement par `scripts/backup-storage.sh`. Voir « Sauvegarde » |
+| `SMTP4DEV_WEB_BIND_IP` | **Non upstream** : où publier l'interface web du piège à courriels. `127.0.0.1` par défaut ; voir le piège 3 avant d'y mettre une IP de LAN |
 
 ## Les trois pièges qui coûtent une soirée
 
@@ -113,6 +114,25 @@ l'override, et l'URL du worker qui passe par ce nom.
 les interfaces. Sur une Debian avec un agent de transport local, le démarrage échoue
 sur un `address already in use` qui ne nomme pas le coupable. Vérifiez avec
 `ss -tlnp | grep ':25 '`.
+
+Tant qu'on y est : **l'interface web de smtp4dev n'a aucune authentification**, et
+elle donne accès aux liens de réinitialisation de mot de passe — donc à la prise de
+contrôle des comptes. L'override publie ses trois ports séparément pour cette
+raison :
+
+```yaml
+    ports: !override
+      - "${SMTP4DEV_WEB_BIND_IP}:${SMTP4DEV_WEB_PORT}:80"
+      - "127.0.0.1:${SMTP4DEV_SMTP_PORT}:25"
+      - "127.0.0.1:${SMTP4DEV_IMAP_PORT}:143"
+```
+
+Seule l'interface web peut sortir sur le LAN, en renseignant `SMTP4DEV_WEB_BIND_IP`
+— c'est la seule qu'on ait une raison d'ouvrir dans un navigateur. L'IMAP donne accès
+aux mêmes messages et le SMTP accepterait n'importe quel envoi : ils restent sur le
+loopback en dur. À `127.0.0.1`, l'accès se fait par un tunnel SSH :
+`ssh -N -L 8012:127.0.0.1:8012 <hôte>`. La sortie définitive de ce compromis, c'est
+un vrai relais SMTP — après quoi smtp4dev se retire par un profil.
 
 ## Monter de version
 
