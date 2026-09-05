@@ -6,6 +6,8 @@ COMPOSE = cd src && docker compose --env-file ../.env
 # qu'elle y est bien utilisee. DEBUG_QGIS_WORKER_HOST_PATH, elle, est sans emploi.
 IGNORED_VARS = DEBUG_QGIS_WORKER_HOST_PATH WEB_BIND_IP STORAGE_API_BIND_IP STORAGE_CONSOLE_BIND_IP SMTP4DEV_BIND_IP WEBDAV_BIND_IP GARAGE_BACKUP_ENDPOINT GARAGE_BACKUP_ACCESS_KEY GARAGE_BACKUP_SECRET_KEY GARAGE_BACKUP_BUCKET
 
+.PHONY: up down config ps logs migrate check
+
 up:      ; $(COMPOSE) up -d --build
 down:    ; $(COMPOSE) down
 config:  ; $(COMPOSE) config -q
