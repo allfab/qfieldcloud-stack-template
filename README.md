@@ -211,6 +211,57 @@ La dernière ligne doit annoncer `New job registered "runcrons" ... "@every 1h"`
 Un `exit code 137` sur le `runcrons` juste avant le redémarrage est normal :
 c'est l'`exec` en cours, tué par la recréation du conteneur `app`.
 
+## Journalisation
+
+L'upstream ne pose de plafond que sur cinq services :
+
+```text
+app              1000m × 10 =  9,8 Go
+nginx            1000m × 10 =  9,8 Go
+qgis3, qgis4, worker_wrapper  100m × 10 =  1,0 Go chacun
+                             ────────
+                              22,5 Go
+```
+
+Ce total, souvent cité, est un **plancher et non un plafond** : `db`, `ofelia`,
+`memcached`, `smtp4dev`, `webdav`, `mkcert` et `mirror_transformation_grids` ne
+déclarent aucune limite et retombent sur le défaut du démon, `json-file` **sans
+limite**. Le service le plus exposé est justement `db`, que le profil standalone
+lance avec `log_statement=all`.
+
+L'override borne tous les services que Compose gère, à `100m × 5`, soit **5,9 Go
+au total** au lieu d'un plafond non borné :
+
+```yaml
+x-logging-cap: &logging-cap
+  options:
+    max-size: "100m"
+    max-file: "5"
+```
+
+Les options de journalisation sont figées à la création d'un conteneur : un
+`make up` est nécessaire, et `docker inspect <conteneur> --format
+'{{.HostConfig.LogConfig.Config}}'` dit ce qui s'applique réellement.
+
+**Un filet reste à poser hors du dépôt.** Les conteneurs QGIS éphémères sont
+créés par `worker_wrapper` via l'API Docker, pas par Compose : aucun fichier de
+ce dépôt ne les couvre, et ils ne connaissent que le défaut du démon. Sur la
+machine :
+
+```bash
+sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
+{
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "100m", "max-file": "3" }
+}
+EOF
+sudo systemctl restart docker
+```
+
+Le redémarrage du démon coupe brièvement tous les conteneurs. Ce défaut ne
+s'applique qu'aux conteneurs **créés ensuite** : il ne change rien à ceux qui
+tournent déjà, dont les options sont figées.
+
 ## Sauvegarde
 
 Trois choses, et trois seulement :

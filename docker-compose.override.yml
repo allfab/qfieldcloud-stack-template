@@ -1,5 +1,22 @@
 # /opt/docker/qfieldcloud-stack/docker-compose.override.yml
 # Le SEUL fichier Compose qui m'appartient. Chargé en dernier (voir COMPOSE_FILE).
+
+# Plafonds de journalisation. L'upstream n'en pose que sur cinq services (app et
+# nginx à 1000m × 10, soit 9,8 Go chacun ; qgis3, qgis4 et worker_wrapper à
+# 100m × 10). Les autres — db, ofelia, memcached, smtp4dev, webdav — n'en
+# déclarent aucun et retombent sur le défaut du démon, c'est-à-dire json-file
+# SANS limite. Le total de 22,5 Go souvent cité est donc un plancher, pas un
+# plafond. On borne ici les services que Compose gère.
+#
+# Ce que ce fichier ne peut PAS couvrir : les conteneurs QGIS éphémères, créés
+# par worker_wrapper via l'API Docker et non par Compose. Eux ne connaissent que
+# le défaut du démon. Le filet global se pose donc dans /etc/docker/daemon.json,
+# sur la machine — voir la section « Journalisation » du README.
+x-logging-cap: &logging-cap
+  options:
+    max-size: "100m"
+    max-file: "5"
+
 services:
 
   app:
@@ -19,6 +36,8 @@ services:
     # laisserait passer des packages obsolètes définitivement non nettoyés.
     labels:
       ofelia.job-exec.runcrons.schedule: "@every 1h"
+    # 9,8 Go d'origine, pour l'application la plus bavarde de la pile.
+    logging: *logging-cap
 
   nginx:
     # Où publier nginx. Deux cas :
@@ -36,6 +55,9 @@ services:
       default:
         aliases:
           - ${QFIELDCLOUD_HOST}
+    # 9,8 Go d'origine, alors qu'un journal d'accès se lit rarement au-delà
+    # d'une semaine.
+    logging: *logging-cap
 
   db:
     # Base de l'application : accessible pour les dumps, pas depuis le LAN.
@@ -66,6 +88,9 @@ services:
       - log_destination=stderr
       - -c
       - shared_buffers=256MB
+    # Aucun plafond en amont : le service qui journalise les requêtes était le
+    # seul à pouvoir remplir le disque sans limite.
+    logging: *logging-cap
 
   rustfs:
     # RETIRÉ : le stockage objet est sorti de la machine (cluster Garage sur
@@ -89,6 +114,7 @@ services:
       - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_WEB_PORT}:80"
       - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_SMTP_PORT}:25"
       - "${SMTP4DEV_BIND_IP}:${SMTP4DEV_IMAP_PORT}:143"
+    logging: *logging-cap
 
   webdav:
     # Même logique que rustfs : s'il sert un jour de stockage d'attachements,
@@ -96,6 +122,7 @@ services:
     # tout cela ne passe par le LAN.
     ports: !override
       - "${WEBDAV_BIND_IP}:${WEBDAV_PUBLIC_PORT}:80"
+    logging: *logging-cap
 
   certbot:
     # Le TLS public est terminé par le frontal, qui détient un certificat
@@ -113,3 +140,22 @@ services:
     # Garage est créé une fois à la main, et la clé applicative porte
     # `Can create buckets: false` — ce service échouerait de toute façon.
     profiles: ["never"]
+
+  # Services que l'upstream laisse sans plafond de journalisation. Rien d'autre
+  # à leur dire : seule la politique de journaux change.
+  memcached:
+    logging: *logging-cap
+
+  ofelia:
+    logging: *logging-cap
+
+  worker_wrapper:
+    logging: *logging-cap
+
+  # Les deux services à usage unique : ils tournent au démarrage puis sortent,
+  # mais mirror_transformation_grids recopie 847 Mo et sait être bavard.
+  mirror_transformation_grids:
+    logging: *logging-cap
+
+  mkcert:
+    logging: *logging-cap
