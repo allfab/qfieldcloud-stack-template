@@ -11,20 +11,20 @@ echo "Dump testé : $(basename "${DUMP}")"
 
 docker exec qfieldcloud-db-1 sh -c "
 set -e
-psql -U \"\$POSTGRES_USER\" -d postgres -c 'DROP DATABASE IF EXISTS restauration_test' >/dev/null
-psql -U \"\$POSTGRES_USER\" -d postgres -c 'CREATE DATABASE restauration_test' >/dev/null
-pg_restore -U \"\$POSTGRES_USER\" -d restauration_test --no-owner --no-privileges \
+psql -U \"\$POSTGRES_USER\" -d postgres -c 'DROP DATABASE IF EXISTS restore_test' >/dev/null
+psql -U \"\$POSTGRES_USER\" -d postgres -c 'CREATE DATABASE restore_test' >/dev/null
+pg_restore -U \"\$POSTGRES_USER\" -d restore_test --no-owner --no-privileges \
   /backups/db/$(basename "${DUMP}")
 echo
 printf '%-22s %-10s %-10s %s\n' table production restaurée écart
 for t in core_user project_project core_job filestorage_file filestorage_fileversion; do
   A=\$(psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -tAc \"SELECT count(*) FROM \$t\" 2>/dev/null || echo '-')
-  B=\$(psql -U \"\$POSTGRES_USER\" -d restauration_test -tAc \"SELECT count(*) FROM \$t\" 2>/dev/null || echo '-')
+  B=\$(psql -U \"\$POSTGRES_USER\" -d restore_test -tAc \"SELECT count(*) FROM \$t\" 2>/dev/null || echo '-')
   printf '%-22s %-10s %-10s %s\n' \"\$t\" \"\$A\" \"\$B\" \"\$([ \"\$A\" = \"\$B\" ] && echo OK || echo ÉCART)\"
 done
 echo
 echo -n 'PostGIS dans la base restaurée : '
-psql -U \"\$POSTGRES_USER\" -d restauration_test -tAc \"SELECT extversion FROM pg_extension WHERE extname='postgis'\"
-psql -U \"\$POSTGRES_USER\" -d postgres -c 'DROP DATABASE restauration_test' >/dev/null
+psql -U \"\$POSTGRES_USER\" -d restore_test -tAc \"SELECT extversion FROM pg_extension WHERE extname='postgis'\"
+psql -U \"\$POSTGRES_USER\" -d postgres -c 'DROP DATABASE restore_test' >/dev/null
 echo 'Base jetable supprimée.'
 "

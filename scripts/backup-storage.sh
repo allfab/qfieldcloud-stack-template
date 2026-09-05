@@ -27,15 +27,15 @@ set -a; source "${STACK_DIR}/.env"; set +a
 # valeur laissée à `change_me` en échec de connexion mc — deux messages qui ne
 # nomment pas le coupable. Voir la section "Sauvegarde du stockage objet" du
 # .env.template, qui donne aussi les valeurs pour le profil standalone.
-manquantes=""
+missing=""
 for v in S3_BACKUP_ENDPOINT S3_BACKUP_ACCESS_KEY S3_BACKUP_SECRET_KEY S3_BACKUP_BUCKET; do
-  valeur="${!v-}"
-  case "${valeur}" in
-    ""|*change_me*) manquantes="${manquantes} ${v}" ;;
+  value="${!v-}"
+  case "${value}" in
+    ""|*change_me*) missing="${missing} ${v}" ;;
   esac
 done
-if [ -n "${manquantes}" ]; then
-  echo "Sauvegarde du bucket impossible : à renseigner dans .env :${manquantes}" >&2
+if [ -n "${missing}" ]; then
+  echo "Sauvegarde du bucket impossible : à renseigner dans .env :${missing}" >&2
   echo "Voir la section \"Sauvegarde du stockage objet\" de .env.template." >&2
   exit 1
 fi
@@ -69,5 +69,5 @@ find "${BACKUP_DIR}/env" -name 'env-*' -mtime "+${RETENTION_DAYS}" -delete
   echo "taille      : $(du -sh --apparent-size "${BACKUP_DIR}/storage" | cut -f1)"
   echo "dumps base  : $(find "${BACKUP_DIR}/db" -name '*.dump' | wc -l)"
   echo "dernier dump: $(ls -1t "${BACKUP_DIR}/db"/*.dump 2>/dev/null | head -1 | xargs -r basename)"
-} > "${BACKUP_DIR}/derniere-sauvegarde.txt"
-cat "${BACKUP_DIR}/derniere-sauvegarde.txt"
+} > "${BACKUP_DIR}/last-backup.txt"
+cat "${BACKUP_DIR}/last-backup.txt"

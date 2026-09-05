@@ -49,9 +49,9 @@ services:
       - ../backups:/backups
     labels:
       ofelia.enabled: "true"
-      ofelia.job-exec.sauvegarde-db.schedule: "0 30 2 * * *"
-      ofelia.job-exec.sauvegarde-db.no-overlap: "true"
-      ofelia.job-exec.sauvegarde-db.command: >-
+      ofelia.job-exec.backup-db.schedule: "0 30 2 * * *"
+      ofelia.job-exec.backup-db.no-overlap: "true"
+      ofelia.job-exec.backup-db.command: >-
         sh -c 'set -e;
         pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -Fc
         -f "/backups/db/qfieldcloud-$$(date +%Y%m%d-%H%M).dump";

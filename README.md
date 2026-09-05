@@ -16,7 +16,7 @@ qui dit si vous avez contracté une dette.
 | `.env.template` | Modèle de configuration. **À copier en `.env`**, qui n'est jamais versionné |
 | `docker-compose.override.yml` | Le seul fichier Compose qui vous appartient. Chargé en dernier |
 | `Makefile` | Raccourcis, pour ne plus se demander d'où lancer Compose ni où vivent les scripts |
-| `scripts/` | Sauvegarde du bucket et test de restauration. À appeler par le `Makefile`, pas directement |
+| `scripts/` | Sauvegarde du bucket et test de restauration. À appeler par le `Makefile` (`make backup`, `make restore-test`), pas directement |
 | `.gitignore` | Exclut `.env` — il contient vos secrets |
 
 ## Démarrage, d'un dossier vide à une instance qui répond
@@ -65,6 +65,13 @@ dc exec app python manage.py createsuperuser
 Au premier `up`, quatre services sortent en `Exited (0)` — c'est normal, ils ont fait
 leur travail — et `worker_wrapper` boucle sur `relation "project_project" does not
 exist` jusqu'au `migrate`. Voir la section « pièges » plus bas.
+
+## Conventions
+
+Le code est en anglais — cibles du `Makefile`, variables, noms de fichiers, noms
+de jobs Ofelia, bases de données — et la prose en français : commentaires,
+messages affichés, documentation. C'est la convention la plus courante des dépôts
+publics, et elle évite le mélange des deux dans une même ligne de commande.
 
 ## Les variables à changer
 
@@ -220,12 +227,12 @@ Deux ordonnanceurs, pour une raison précise :
 | Quoi | Par qui | Quand |
 |---|---|---|
 | `pg_dump -Fc` + purge à 14 jours | **ofelia**, `job-exec` sur `db` (labels de l'override) | 02:30 |
-| miroir du bucket + copie du `.env` | **crontab utilisateur**, `make sauvegarde` | 02:45 |
+| miroir du bucket + copie du `.env` | **crontab utilisateur**, `make backup` | 02:45 |
 
 La ligne de crontab, en absolu puisque cron ne se place nulle part :
 
 ```cron
-45 2 * * * make -C /opt/docker/qfieldcloud-stack sauvegarde >> /opt/docker/qfieldcloud-stack/backups/backup-storage.log 2>&1
+45 2 * * * make -C /opt/docker/qfieldcloud-stack backup >> /opt/docker/qfieldcloud-stack/backups/backup-storage.log 2>&1
 ```
 
 Elle passe par le `Makefile` et jamais par `scripts/backup-storage.sh` :
