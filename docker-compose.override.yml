@@ -93,7 +93,7 @@ services:
     logging: *logging-cap
 
   rustfs:
-    # RETIRÉ : le stockage objet est sorti de la machine (cluster Garage sur
+    # RETIRÉ : le stockage objet est sorti de la machine (serveur Garage sur
     # 10.10.20.21). Les objets ont été miroités, `mc diff` est vide, et le
     # volume `rustfs_data` est conservé quelques jours en repli.
     profiles: ["never"]
