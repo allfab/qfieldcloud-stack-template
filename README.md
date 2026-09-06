@@ -149,6 +149,61 @@ loopback en dur. À `127.0.0.1`, l'accès se fait par un tunnel SSH :
 `ssh -N -L 8012:127.0.0.1:8012 <hôte>`. La sortie définitive de ce compromis, c'est
 un vrai relais SMTP — après quoi smtp4dev se retire par un profil.
 
+## Ce que l'instance n'a pas
+
+Le dépôt open source livre **l'admin Django et l'API REST**, pas l'espace utilisateur
+de `app.qfield.cloud`. Le profil, le choix d'abonnement et la liste de projets qu'on y
+voit ne sont pas dans le sous-module : `core/templates/` ne contient que `account/`,
+`admin/`, `allauth/`, `axes/`, `captcha/` et `socialaccount/`, tout `core/views/` est du
+DRF, et `urls.py` **bloque explicitement** le peu de libre-service qu'allauth apporterait :
+
+```python
+path("accounts/3rdparty/", blocked_view),
+path("accounts/email/", blocked_view),
+path("accounts/password/change/", blocked_view),
+```
+
+Ce n'est pas un oubli, c'est une décision de l'upstream. Trois conséquences pratiques.
+
+**Un compte non-`is_staff` qui se connecte par le web boucle.** `LOGIN_REDIRECT_URL`
+vaut `index`, `index` redirige vers `QFIELDCLOUD_ADMIN_URI`, l'admin refuse le
+non-staff, allauth le voit connecté et le renvoie à `index` :
+
+```
+/ -> admin/ -> /admin/login/?next=/admin/ -> /accounts/login/?next=/admin/ -> /admin/ -> …
+```
+
+Le navigateur affiche `ERR_TOO_MANY_REDIRECTS`. C'est le comportement de l'upstream,
+pas un défaut de configuration. Si vous ouvrez les inscriptions, sachez que c'est
+l'accueil réservé à qui vient de créer son compte.
+
+**L'utilisateur n'a rien à faire sur le web.** L'API, elle, lui répond normalement
+(`/api/v1/auth/user/`, `/api/v1/projects/`) : il travaille depuis QField et QFieldSync
+avec ses identifiants. C'est de là qu'il pousse ses projets et synchronise.
+
+**Les quotas sont des lignes en base, pas du code.** Le plan `community`, attribué
+d'office à l'inscription, vaut sur une instance neuve :
+
+| Réglage | Valeur |
+|---|---|
+| `storage_mb` | 10 000, soit 10 Go |
+| `storage_keep_versions` | 10 versions par fichier |
+| `job_minutes` | 10 000 |
+| `is_external_db_supported` | **False** |
+| `initial_subscription_status` | `active_paid` — actif d'emblée, rien n'est facturé |
+
+Le seul réglage qui mord vraiment est le quatrième : un projet QGIS branché sur
+**PostGIS ou un WFS** est refusé au packaging pour un compte `community`
+(`PlanInsufficientError`, dans `core/permissions_utils.py`). Un projet en GeoPackage
+passe sans rien demander. Tout cela s'édite dans l'admin, *Subscription → Plans* — sur
+une instance auto-hébergée sans facturation, relever une limite est une décision
+d'exploitant, pas un contournement.
+
+Deux détails à ne pas croire sur parole : `synchronizations_per_months` n'est lu nulle
+part dans le code, il ne limite rien ; et `can_always_upload_files()` exempte les
+clients `QFIELD` et `WORKER` du contrôle de quota fichier par fichier — c'est au
+packaging que le quota global s'applique.
+
 ## Monter de version
 
 ```bash
