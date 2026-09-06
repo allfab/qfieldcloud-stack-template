@@ -18,6 +18,10 @@
   /* Vert de QField, réservé aux accents : jamais deux verts côte à côte. */
   --qfc-green: #80cc28;
   --qfc-green-dark: #6aab1e;
+  /* Le vert de la marque est trop clair pour porter du texte blanc : 1,98:1.
+   * Les aplats prennent donc cette déclinaison sombre, qui tient 4,79:1. */
+  --qfc-green-solid: #4f7f16;
+  --qfc-green-solid-dark: #456e13;
 
   --qfc-ink: #1c2735;
   --qfc-muted: #5d6b7d;
@@ -230,15 +234,38 @@ label {
   border-color: var(--qfc-green);
 }
 
+/* Au survol l'aplat prend la déclinaison sombre, pour la même raison de
+ * contraste : le vert de marque sous du blanc n'est pas lisible. */
 .btn-outline-success:hover,
 .btn-outline-success:not(:disabled):not(.disabled):active {
-  background-color: var(--qfc-green);
-  border-color: var(--qfc-green);
+  background-color: var(--qfc-green-solid);
+  border-color: var(--qfc-green-solid);
   color: #ffffff;
 }
 
 .btn-outline-success:focus {
   box-shadow: 0 0 0 0.2rem rgba(128, 204, 40, 0.35);
+}
+
+/* Le vert plein ne sert qu'à la page d'inscription (`account/signup.html`),
+ * donc invisible tant que QFIELDCLOUD_ACCOUNT_ADAPTER est sur SignUpClosed.
+ * Sans cette règle, rouvrir les inscriptions ferait ressortir le vert de
+ * Bootstrap, qui n'est pas celui de QField. */
+.btn-success {
+  background-color: var(--qfc-green-solid);
+  border-color: var(--qfc-green-solid);
+}
+
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:not(:disabled):not(.disabled):active {
+  background-color: var(--qfc-green-solid-dark);
+  border-color: var(--qfc-green-solid-dark);
+}
+
+.btn-success:focus,
+.btn-success:not(:disabled):not(.disabled):active:focus {
+  box-shadow: 0 0 0 0.2rem rgba(79, 127, 22, 0.35);
 }
 
 /* `.btn-default` n'existe pas en Bootstrap 4 : sans cela, « Mot de passe
