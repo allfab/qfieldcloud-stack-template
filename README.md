@@ -8,6 +8,10 @@ Le principe tient en une phrase : `opengisch/QFieldCloud` est un **sous-module**
 au-dessus. `git -C src status` doit rester vide en permanence — c'est le contrôle
 qui dit si vous avez contracté une dette.
 
+Cela vaut jusqu'à l'apparence : mettre son logo et ses couleurs sur la page de
+connexion se fait depuis le dehors, par un module de réglages Django composé —
+voir « Thème ».
+
 ## Ce que contient ce dépôt
 
 | Fichier | Rôle |
@@ -17,6 +21,7 @@ qui dit si vous avez contracté une dette.
 | `docker-compose.override.yml` | Le seul fichier Compose qui vous appartient. Chargé en dernier |
 | `Makefile` | Raccourcis, pour ne plus se demander d'où lancer Compose ni où vivent les scripts |
 | `scripts/` | Sauvegarde du bucket et test de restauration. À appeler par le `Makefile` (`make backup`, `make restore-test`), pas directement |
+| `theme/` | Apparence de l'instance : logos, couleurs, textes. Chargé par `DJANGO_SETTINGS_MODULE`, sans rien modifier dans `src/`. Voir « Thème » |
 | `.gitignore` | Exclut `.env` — il contient vos secrets |
 
 ## Démarrage, d'un dossier vide à une instance qui répond
@@ -90,6 +95,7 @@ Toutes sont marquées `change_me` ou pointent vers `example.org` dans le templat
 | `QFIELDCLOUD_DEFAULT_TIME_ZONE` | Défaut upstream : `Europe/Zurich` |
 | `S3_BACKUP_*` | **Non upstream** : lues uniquement par `scripts/backup-storage.sh`. Voir « Sauvegarde » |
 | `SMTP4DEV_WEB_BIND_IP` | **Non upstream** : où publier l'interface web du piège à courriels. `127.0.0.1` par défaut ; voir le piège 3 avant d'y mettre une IP de LAN |
+| `DJANGO_SETTINGS_MODULE` | Le point d'extension de **tous** les réglages Django. Le passer à `qfieldcloud.settings_custom` active `theme/` ; le laisser au défaut donne l'apparence upstream. Voir « Thème » |
 
 ## Les trois pièges qui coûtent une soirée
 
