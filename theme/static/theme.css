@@ -1,24 +1,367 @@
-/* Thème local. Chargé après qfieldcloud.css, donc il gagne à spécificité égale. */
+/* Thème des pages publiques (/accounts/…).
+ *
+ * Chargé après vendor.css et qfieldcloud.css par account-base.html, donc il
+ * gagne à spécificité égale. Bootstrap 4.6 en dessous : les sélecteurs visent
+ * ses classes (.card, .btn-primary, .form-control), jamais un gabarit précis.
+ *
+ * Le dessin reprend celui de qfield.cloud : le bleu de la marque, le vert de
+ * QField, et des courbes de niveau en filigrane — voir contours.svg, produit
+ * par theme/contours.py.
+ */
+
 :root {
-  --brand: #0f766e;
-  --brand-dark: #115e59;
+  /* Bleu de la marque QFieldCloud, relevé sur le logo officiel. */
+  --qfc-blue: #4a6fae;
+  --qfc-blue-dark: #3a5a92;
+  --qfc-blue-deep: #21375c;
+  --qfc-blue-night: #16233a;
+  /* Vert de QField, réservé aux accents : jamais deux verts côte à côte. */
+  --qfc-green: #80cc28;
+  --qfc-green-dark: #6aab1e;
+
+  --qfc-ink: #1c2735;
+  --qfc-muted: #5d6b7d;
+  --qfc-surface: #ffffff;
+  --qfc-ground: #f2f6fb;
+  --qfc-line: #dde6f1;
+  --qfc-shadow: 0 1px 2px rgba(33, 55, 92, 0.06), 0 10px 30px rgba(33, 55, 92, 0.10);
+
+  /* Le filigrane : teinte et densité des courbes, par surface. */
+  --qfc-contour-tint: var(--qfc-blue);
+  --qfc-contour-opacity: 0.16;
+
+  /* Les pages publiques sont dessinées en clair ; le bloc sombre plus bas
+   * reprend la main quand le navigateur le demande. Sans cette ligne, le
+   * `<meta name="color-scheme" content="dark light">` du gabarit laisse le
+   * navigateur assombrir les champs de formulaire tout seul, à contretemps. */
+  color-scheme: light;
 }
 
-.navbar.bg-primary { background-color: var(--brand) !important; }
+/* --- Le fond : un relief, pas une texture ------------------------------- */
+
+body {
+  background-color: var(--qfc-ground);
+  color: var(--qfc-ink);
+  position: relative;
+}
+
+/* Les courbes sont posées en masque, pas en image : une seule source SVG,
+ * teintée par `background-color`, donc réutilisable sur fond clair comme sur
+ * fond sombre. Le @supports évite l'aplat de couleur là où le masque manque. */
+@supports (mask-size: cover) or (-webkit-mask-size: cover) {
+  .qfc-contours::before,
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-color: var(--qfc-contour-tint);
+    opacity: var(--qfc-contour-opacity);
+    -webkit-mask: url('contours.svg') center / cover no-repeat;
+    mask: url('contours.svg') center / cover no-repeat;
+  }
+
+  body::before {
+    position: fixed;
+    z-index: 0;
+    /* Le relief s'efface vers le bas pour ne pas concurrencer le formulaire. */
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    -webkit-mask-image: url('contours.svg'),
+      linear-gradient(160deg, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 85%);
+    mask-image: url('contours.svg'),
+      linear-gradient(160deg, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 85%);
+    -webkit-mask-size: cover, cover;
+    mask-size: cover, cover;
+  }
+}
+
+/* Le contenu repasse devant le filigrane. */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Bandeau ------------------------------------------------------------ */
+
+.navbar.bg-primary {
+  background: linear-gradient(100deg, var(--qfc-blue-deep), var(--qfc-blue)) !important;
+  border-bottom: 3px solid var(--qfc-green);
+  box-shadow: 0 1px 12px rgba(33, 55, 92, 0.18);
+  overflow: hidden;
+  padding: 0.75rem 1.25rem;
+}
+
+/* Le même relief, en clair, sous le bandeau. */
+.navbar.bg-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+@supports (mask-size: cover) or (-webkit-mask-size: cover) {
+  .navbar.bg-primary::before {
+    background-color: #ffffff;
+    opacity: 0.14;
+    -webkit-mask: url('contours.svg') center / 140% no-repeat;
+    mask: url('contours.svg') center / 140% no-repeat;
+  }
+}
+
+.navbar.bg-primary > a {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.qfc-header-logo {
+  height: 1.75rem;
+  transition: transform 0.2s ease;
+}
+
+.navbar.bg-primary > a:hover .qfc-header-logo {
+  transform: translateY(-1px);
+}
+
+/* --- Logo de page ------------------------------------------------------- */
+
+/* Le logo officiel est très large (rapport 5,7:1) : la réserve de 15rem
+ * d'origine laissait un trou au-dessus du formulaire. */
+.qfc-logo-wrapper {
+  min-height: 0;
+  padding: 2.5rem 0 1.75rem;
+}
+
+.qfc-main-logo {
+  max-height: 4.5rem;
+  width: min(100%, 22rem);
+}
+
+/* --- La carte ----------------------------------------------------------- */
+
+.card {
+  position: relative;
+  border: 1px solid var(--qfc-line);
+  border-radius: 14px;
+  background-color: var(--qfc-surface);
+  box-shadow: var(--qfc-shadow);
+  overflow: hidden;
+}
+
+/* Un liseré bleu-vert en tête de carte : l'accent de la marque, dosé. */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--qfc-blue) 0%, var(--qfc-blue) 55%, var(--qfc-green) 100%);
+}
+
+.card-body {
+  padding: 1.75rem;
+}
+
+.card-title {
+  color: var(--qfc-blue-deep);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 1.25rem;
+}
+
+/* --- Formulaires -------------------------------------------------------- */
+
+.form-control {
+  border-color: var(--qfc-line);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  height: auto;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus {
+  border-color: var(--qfc-blue);
+  box-shadow: 0 0 0 0.2rem rgba(74, 111, 174, 0.22);
+}
+
+label {
+  color: var(--qfc-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+  background-color: var(--qfc-blue);
+  border-color: var(--qfc-blue);
+}
+
+/* --- Boutons ------------------------------------------------------------ */
+
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
 
 .btn-primary {
-  background-color: var(--brand);
-  border-color: var(--brand);
+  background-color: var(--qfc-blue);
+  border-color: var(--qfc-blue);
 }
+
 .btn-primary:hover,
 .btn-primary:focus,
 .btn-primary:not(:disabled):not(.disabled):active {
-  background-color: var(--brand-dark);
-  border-color: var(--brand-dark);
+  background-color: var(--qfc-blue-dark);
+  border-color: var(--qfc-blue-dark);
 }
 
-a { color: var(--brand); }
-a:hover { color: var(--brand-dark); }
+.btn-primary:focus,
+.btn-primary:not(:disabled):not(.disabled):active:focus {
+  box-shadow: 0 0 0 0.2rem rgba(74, 111, 174, 0.35);
+}
 
-.card { border-color: #d7e3e1; }
-.footer { background-color: #f2f7f6; }
+/* Le vert de QField sert la deuxième action, jamais la principale. */
+.btn-outline-success {
+  color: var(--qfc-green-dark);
+  border-color: var(--qfc-green);
+}
+
+.btn-outline-success:hover,
+.btn-outline-success:not(:disabled):not(.disabled):active {
+  background-color: var(--qfc-green);
+  border-color: var(--qfc-green);
+  color: #ffffff;
+}
+
+.btn-outline-success:focus {
+  box-shadow: 0 0 0 0.2rem rgba(128, 204, 40, 0.35);
+}
+
+/* `.btn-default` n'existe pas en Bootstrap 4 : sans cela, « Mot de passe
+ * oublié ? » sort en bouton nu, sans couleur ni contour. */
+.btn-default {
+  color: var(--qfc-muted);
+  background-color: transparent;
+  border-color: transparent;
+}
+
+.btn-default:hover {
+  color: var(--qfc-blue);
+}
+
+/* --- Liens et texte ----------------------------------------------------- */
+
+a {
+  color: var(--qfc-blue);
+  text-decoration-color: rgba(74, 111, 174, 0.35);
+}
+
+a:hover {
+  color: var(--qfc-blue-dark);
+}
+
+.text-muted {
+  color: var(--qfc-muted) !important;
+}
+
+/* --- Alertes et messages ------------------------------------------------ */
+
+.alert {
+  border-radius: 10px;
+  border-width: 0 0 0 4px;
+}
+
+.alert-success {
+  border-left-color: var(--qfc-green);
+}
+
+.alert-info,
+.alert-primary {
+  border-left-color: var(--qfc-blue);
+}
+
+/* --- Pied de page ------------------------------------------------------- */
+
+.footer {
+  background-color: transparent;
+  border-top: 1px solid var(--qfc-line);
+  color: var(--qfc-muted);
+}
+
+.footer .navbar {
+  padding: 0;
+}
+
+/* --- Variante sombre ---------------------------------------------------- */
+
+/* Le gabarit annonce `color-scheme: dark light` : autant tenir la promesse
+ * plutôt que de laisser le navigateur assombrir les champs seuls. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --qfc-ink: #e7edf6;
+    --qfc-muted: #9fb0c6;
+    --qfc-surface: #1b2942;
+    --qfc-ground: #111b2c;
+    --qfc-line: #2c3f5f;
+    --qfc-contour-tint: #7fa3dd;
+    --qfc-contour-opacity: 0.20;
+    --qfc-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  .card-title {
+    color: #dfe8f6;
+  }
+
+  .form-control {
+    background-color: var(--qfc-blue-night);
+    border-color: var(--qfc-line);
+    color: var(--qfc-ink);
+  }
+
+  .form-control:focus {
+    background-color: var(--qfc-blue-night);
+    color: var(--qfc-ink);
+  }
+
+  .form-control::placeholder {
+    color: #7d8ea6;
+  }
+
+  a {
+    color: #9dbcf0;
+  }
+
+  a:hover {
+    color: #c3d5f6;
+  }
+
+  .btn-primary {
+    background-color: #5a80c2;
+    border-color: #5a80c2;
+  }
+
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:not(:disabled):not(.disabled):active {
+    background-color: #4a6fae;
+    border-color: #4a6fae;
+  }
+
+  .btn-outline-success {
+    color: #9ada4c;
+    border-color: #6aab1e;
+  }
+
+  hr {
+    border-top-color: var(--qfc-line);
+  }
+
+  .qfc-cookie-banner {
+    background-color: rgba(27, 41, 66, 0.9);
+  }
+}

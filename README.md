@@ -186,6 +186,7 @@ réglages upstream et n'écrase que l'apparence.
 ```
 theme/
   settings_custom.py          # WHITELABEL (pages publiques) + JAZZMIN_* (admin)
+  contours.py                 # régénère static/contours.svg (outil de conception)
   static/                     # logos, favicon, theme.css -> servis sous custom/
   account-base.html           # gabarit recopié, + une ligne <link>
   account-base.html.upstream  # sa version d'origine, pour `make theme-diff`
@@ -194,6 +195,38 @@ theme/
 Deux thèmes, parce que la racine du site redirige vers `/admin/` : `WHITELABEL`
 habille `/accounts/…`, Jazzmin habille l'admin. Les deux se règlent dans
 `settings_custom.py`.
+
+### Le dessin
+
+L'habillage reprend les codes de [qfield.cloud](https://qfield.cloud) : le logo
+officiel, le bleu de la marque `#4a6fae`, le vert de QField `#80cc28` en accent,
+et des courbes de niveau en filigrane derrière la page de connexion.
+
+Le fond n'est pas une image trouvée quelque part : `theme/contours.py`
+échantillonne un champ scalaire et en suit les lignes de niveau par marching
+squares, comme une carte topographique. Le SVG produit est versionné — le script
+n'est là que pour le rejouer autrement. Changer `SEED` donne un autre relief,
+`LEVELS` l'équidistance des isolignes :
+
+```bash
+python3 theme/contours.py     # réécrit theme/static/contours.svg
+make static                   # sinon le nouveau fichier n'est pas servi
+```
+
+Les courbes sont posées en **masque** CSS, pas en image de fond : une seule
+source SVG, teintée par `background-color`, d'où le même fichier en bleu sur la
+page claire et en blanc sous le bandeau.
+
+Deux limites à connaître avant de s'approprier le thème :
+
+- le **logo est celui d'OPENGIS.ch**, repris tel quel. Il habille une instance
+  QFieldCloud, il ne dit pas qui l'exploite. Le nom, lui, est à vous : une seule
+  ligne dans `settings_custom.py`, `INSTANCE_NAME`, le porte partout — onglet,
+  admin, page de connexion. La laisser sur `Mon instance QFieldCloud` laisse
+  l'instance anonyme, ce qui est un choix, pas un oubli ;
+- l'admin ne reçoit **que** les couleurs Jazzmin (`JAZZMIN_UI_TWEAKS`), pas
+  `theme.css` : `custom_css` reste celui de l'upstream, qui porte déjà les
+  correctifs de l'admin QFieldCloud.
 
 Trois choses à ne pas oublier :
 
