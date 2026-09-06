@@ -206,8 +206,49 @@ Trois choses à ne pas oublier :
   upstream n'a pas bougé. Sortie non vide = reporter la ligne `<link>` dans le
   nouveau gabarit, puis rafraîchir le fichier `.upstream`.
 
-Retour arrière : `DJANGO_SETTINGS_MODULE=qfieldcloud.settings` dans `.env`, plus
-le retrait du montage du gabarit dans l'override.
+### Retour arrière
+
+Le thème tient à **deux** leviers indépendants, et `.env` n'en commande qu'un.
+Le module de réglages porte les logos, les titres et les couleurs de l'admin ;
+le gabarit `account/base.html`, lui, charge `custom/theme.css` de lui-même, sans
+rien demander à Django. Ne défaire que `.env` laisse donc la palette du thème
+sur les pages `/accounts/…` — l'instance a l'air inchangée, et c'est normal.
+
+Dans l'ordre :
+
+```shell
+# 1. Les réglages : reprendre ceux de l'upstream.
+sed -i 's/^DJANGO_SETTINGS_MODULE=.*/DJANGO_SETTINGS_MODULE=qfieldcloud.settings/' .env
+
+# 2. Les montages : commenter le bloc `volumes` du thème sous `app` ET celui
+#    sous `worker_wrapper`, dans docker-compose.override.yml.
+$EDITOR docker-compose.override.yml
+
+# 3. Recréer les conteneurs, puis recollecter : collectstatic réécrit le
+#    manifeste, d'où `custom/` disparaît. C'est l'étape qui purge le thème.
+make up
+make static
+```
+
+Vérifier plutôt que croire — la sortie attendue est celle-ci, à la lettre :
+
+```shell
+cd src && docker compose --env-file ../.env exec app sh -c '
+  echo $DJANGO_SETTINGS_MODULE
+  grep -c custom/theme.css qfieldcloud/core/templates/account/base.html
+  ls qfieldcloud/core/staticfiles/custom 2>&1'
+```
+
+```
+qfieldcloud.settings
+0
+ls: cannot access 'qfieldcloud/core/staticfiles/custom': No such file or directory
+```
+
+Rien n'est perdu : `theme/` reste en place et le retour au thème se fait en
+défaisant les trois étapes. Décommenter les montages de `app` et de
+`worker_wrapper` **ensemble** : sous `settings_custom`, un worker privé du
+fichier ne démarre pas.
 
 ## Espacer les tâches planifiées
 
