@@ -228,13 +228,18 @@ Deux limites à connaître avant de s'approprier le thème :
   `theme.css` : `custom_css` reste celui de l'upstream, qui porte déjà les
   correctifs de l'admin QFieldCloud.
 
-Trois choses à ne pas oublier :
+Quatre choses à ne pas oublier :
 
 - le module de réglages se monte sur **`app` et `worker_wrapper`** — ils
   partagent le même bloc d'environnement, et le worker ne démarre pas sans lui ;
 - **`make static`** après toute modification de `theme/static/` : le stockage
   statique est à manifeste, et une référence non collectée donne une erreur 500
   sur la page entière, pas une image manquante ;
+- **redémarrer `app` après `make static`** quand le *contenu* d'un fichier a
+  changé. Le manifeste est lu au démarrage : `collectstatic` écrit bien le
+  nouveau nom haché sur le disque, mais le processus continue de servir la page
+  avec l'ancien. Rien ne casse, rien ne prévient — la modification semble
+  simplement sans effet. `cd src && docker compose --env-file ../.env restart app` ;
 - **`make theme-diff`** à chaque montée de version. Sortie vide = le gabarit
   upstream n'a pas bougé. Sortie non vide = reporter la ligne `<link>` dans le
   nouveau gabarit, puis rafraîchir le fichier `.upstream`.
