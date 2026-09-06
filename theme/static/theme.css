@@ -1,0 +1,24 @@
+/* Thème local. Chargé après qfieldcloud.css, donc il gagne à spécificité égale. */
+:root {
+  --brand: #0f766e;
+  --brand-dark: #115e59;
+}
+
+.navbar.bg-primary { background-color: var(--brand) !important; }
+
+.btn-primary {
+  background-color: var(--brand);
+  border-color: var(--brand);
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:not(:disabled):not(.disabled):active {
+  background-color: var(--brand-dark);
+  border-color: var(--brand-dark);
+}
+
+a { color: var(--brand); }
+a:hover { color: var(--brand-dark); }
+
+.card { border-color: #d7e3e1; }
+.footer { background-color: #f2f7f6; }

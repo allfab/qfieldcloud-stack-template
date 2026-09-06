@@ -171,6 +171,38 @@ Ce dépôt retire ainsi `certbot` (le TLS est terminé par un frontal), puis
 `rustfs` et `createbuckets` (le stockage objet est externalisé). Si vous restez
 en profil standalone, enlevez les deux dernières lignes `profiles`.
 
+## Thème
+
+Le dossier `theme/` porte l'apparence de l'instance. Rien n'est modifié dans
+`src/` : `DJANGO_SETTINGS_MODULE` désigne un module à nous, qui importe les
+réglages upstream et n'écrase que l'apparence.
+
+```
+theme/
+  settings_custom.py          # WHITELABEL (pages publiques) + JAZZMIN_* (admin)
+  static/                     # logos, favicon, theme.css -> servis sous custom/
+  account-base.html           # gabarit recopié, + une ligne <link>
+  account-base.html.upstream  # sa version d'origine, pour `make theme-diff`
+```
+
+Deux thèmes, parce que la racine du site redirige vers `/admin/` : `WHITELABEL`
+habille `/accounts/…`, Jazzmin habille l'admin. Les deux se règlent dans
+`settings_custom.py`.
+
+Trois choses à ne pas oublier :
+
+- le module de réglages se monte sur **`app` et `worker_wrapper`** — ils
+  partagent le même bloc d'environnement, et le worker ne démarre pas sans lui ;
+- **`make static`** après toute modification de `theme/static/` : le stockage
+  statique est à manifeste, et une référence non collectée donne une erreur 500
+  sur la page entière, pas une image manquante ;
+- **`make theme-diff`** à chaque montée de version. Sortie vide = le gabarit
+  upstream n'a pas bougé. Sortie non vide = reporter la ligne `<link>` dans le
+  nouveau gabarit, puis rafraîchir le fichier `.upstream`.
+
+Retour arrière : `DJANGO_SETTINGS_MODULE=qfieldcloud.settings` dans `.env`, plus
+le retrait du montage du gabarit dans l'override.
+
 ## Espacer les tâches planifiées
 
 L'upstream fait frapper Ofelia à la porte de django-cron **toutes les minutes** :

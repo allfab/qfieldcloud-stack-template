@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 32" width="220" height="32">
+  <rect x="0" y="4" width="24" height="24" rx="5" fill="#ffffff"/>
+  <path d="M6 22 L12 10 L18 22 Z" fill="#0f766e"/>
+  <text x="32" y="23" font-family="Helvetica,Arial,sans-serif" font-size="17" font-weight="600" fill="#ffffff">SIG allfabox</text>
+</svg>
