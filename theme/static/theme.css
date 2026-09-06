@@ -288,6 +288,28 @@ label {
   box-shadow: 0 0 0 0.2rem rgba(79, 127, 22, 0.35);
 }
 
+/* Tous les gabarits `account/` groupent leurs boutons dans un `.float-right`.
+ * Le flottant les met bout à bout et les renvoie à la ligne dès qu'ils
+ * débordent : « Register » passait sous « Connexion », seul sur sa ligne. En
+ * rangée flex ils tiennent ensemble, et le repli reste propre sur mobile. */
+.card-body .float-right {
+  float: none !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* « Mot de passe oublié ? » est une échappatoire, pas une action : elle part à
+ * gauche, détachée des deux boutons qui engagent, et gagne au passage la place
+ * qui manquait aux trois pour tenir sur une ligne. */
+.card-body .float-right .btn-default {
+  margin-right: auto;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
 /* `.btn-default` n'existe pas en Bootstrap 4 : sans cela, « Mot de passe
  * oublié ? » sort en bouton nu, sans couleur ni contour. */
 .btn-default {
