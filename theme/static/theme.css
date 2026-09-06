@@ -169,6 +169,14 @@ body > * {
   padding: 1.75rem;
 }
 
+/* `account/signup.html` empile DEUX .card-body dans la même carte : le texte
+ * d'accueil puis le formulaire. Sans séparation, les deux flottent au milieu
+ * de 3,5 rem de blanc, et la carte a l'air cassée. */
+.card-body + .card-body {
+  border-top: 1px solid var(--qfc-line);
+  padding-top: 1.25rem;
+}
+
 .card-title {
   color: var(--qfc-blue-deep);
   font-weight: 700;
@@ -195,6 +203,18 @@ label {
   color: var(--qfc-muted);
   font-size: 0.9rem;
   font-weight: 600;
+}
+
+/* Les règles de mot de passe arrivent en <ul> dans un <small class="form-text">.
+ * Sans cela, la liste garde le retrait de 40 px du navigateur et sort du bloc
+ * du champ, alignée sur rien. */
+.form-text ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.form-text li {
+  margin-bottom: 0.15rem;
 }
 
 .custom-control-input:checked ~ .custom-control-label::before {
