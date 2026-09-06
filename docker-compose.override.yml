@@ -40,10 +40,11 @@ services:
     # `DJANGO_SETTINGS_MODULE=qfieldcloud.settings_custom` (dans .env) fait
     # charger le premier ; le second devient le dossier `custom/` du statique.
     #
-    # THÈME ACTIF. Ces trois lignes se recommentent avec celle de worker_wrapper
-    # et le DJANGO_SETTINGS_MODULE de .env : le gabarit charge `custom/theme.css`
-    # de lui-même, sans rien demander aux réglages Django. Le laisser monté après
-    # un retour arrière garde la palette du thème.
+    # THÈME ACTIF — c'est l'état livré par ce template. Ces trois lignes se
+    # recommentent avec celle de worker_wrapper et le DJANGO_SETTINGS_MODULE de
+    # .env, jamais l'une sans les autres : le gabarit charge `custom/theme.css`
+    # de lui-même, sans rien demander aux réglages Django, donc le laisser monté
+    # garde la palette du thème. Voir « Revenir au thème de l'upstream », README.
     volumes:
       - ../theme/settings_custom.py:/usr/src/app/qfieldcloud/settings_custom.py:ro
       - ../theme/static:/usr/src/app/qfieldcloud/core/staticfiles/custom:ro

@@ -12,6 +12,14 @@ Cela vaut jusqu'à l'apparence : mettre son logo et ses couleurs sur la page de
 connexion se fait depuis le dehors, par un module de réglages Django composé —
 voir « Thème ».
 
+**Ce template est livré avec un thème actif**, pas avec l'apparence d'origine de
+QFieldCloud : le logo officiel, le bleu de la marque, le vert de QField et un
+fond de courbes de niveau. Il sert deux fins — habiller une instance dès le
+premier démarrage, et montrer jusqu'où va le principe du dehors, puisqu'il ne
+coûte pas une ligne de `src/`. Il se retire en trois étapes, décrites à
+« Revenir au thème de l'upstream » ; le nom affiché, lui, est un placeholder à
+changer, `INSTANCE_NAME` dans `theme/settings_custom.py`.
+
 ## Ce que contient ce dépôt
 
 | Fichier | Rôle |
@@ -21,7 +29,7 @@ voir « Thème ».
 | `docker-compose.override.yml` | Le seul fichier Compose qui vous appartient. Chargé en dernier |
 | `Makefile` | Raccourcis, pour ne plus se demander d'où lancer Compose ni où vivent les scripts |
 | `scripts/` | Sauvegarde du bucket et test de restauration. À appeler par le `Makefile` (`make backup`, `make restore-test`), pas directement |
-| `theme/` | Apparence de l'instance : logos, couleurs, textes. Chargé par `DJANGO_SETTINGS_MODULE`, sans rien modifier dans `src/`. Voir « Thème » |
+| `theme/` | Apparence de l'instance : logos, couleurs, textes. **Livré actif.** Chargé par `DJANGO_SETTINGS_MODULE`, sans rien modifier dans `src/`. Voir « Thème » |
 | `.gitignore` | Exclut `.env` — il contient vos secrets |
 
 ## Démarrage, d'un dossier vide à une instance qui répond
@@ -48,6 +56,7 @@ mkdir -p src/conf/certbot src/conf/nginx/config.d
 # 3. Votre configuration
 cp .env.template .env
 $EDITOR .env                        # voir « Les variables à changer » ci-dessous
+$EDITOR theme/settings_custom.py    # INSTANCE_NAME : le nom affiché de l'instance
 make check                          # valide le .env contre les fichiers Compose
 make config                         # valide la configuration Compose fusionnée
 
@@ -244,7 +253,12 @@ Quatre choses à ne pas oublier :
   upstream n'a pas bougé. Sortie non vide = reporter la ligne `<link>` dans le
   nouveau gabarit, puis rafraîchir le fichier `.upstream`.
 
-### Retour arrière
+### Revenir au thème de l'upstream
+
+Le thème est livré actif ; ceci le retire et rend à l'instance l'apparence
+d'origine de QFieldCloud — le logo upstream, sa palette, aucune courbe. Rien
+n'est perdu au passage : `theme/` reste en place, et le chemin se refait dans
+l'autre sens.
 
 Le thème tient à **deux** leviers indépendants, et `.env` n'en commande qu'un.
 Le module de réglages porte les logos, les titres et les couleurs de l'admin ;
@@ -264,6 +278,8 @@ $EDITOR docker-compose.override.yml
 
 # 3. Recréer les conteneurs, puis recollecter : collectstatic réécrit le
 #    manifeste, d'où `custom/` disparaît. C'est l'étape qui purge le thème.
+#    Dans cet ordre : `make up` recrée les conteneurs, donc le manifeste que
+#    `make static` vient d'écrire est bien celui que le processus a en mémoire.
 make up
 make static
 ```
@@ -283,10 +299,16 @@ qfieldcloud.settings
 ls: cannot access 'qfieldcloud/core/staticfiles/custom': No such file or directory
 ```
 
-Rien n'est perdu : `theme/` reste en place et le retour au thème se fait en
-défaisant les trois étapes. Décommenter les montages de `app` et de
-`worker_wrapper` **ensemble** : sous `settings_custom`, un worker privé du
-fichier ne démarre pas.
+Le retour au thème se fait en défaisant les trois étapes. Décommenter les
+montages de `app` et de `worker_wrapper` **ensemble** : sous `settings_custom`,
+un worker privé du fichier ne démarre pas.
+
+Un mot sur ce qui est versionné, parce que la moitié de l'opération ne l'est
+pas. `docker-compose.override.yml` et `.env.template` sont livrés thème actif ;
+votre `.env`, lui, n'est pas dans le dépôt. Une instance qui reprend le template
+sans toucher à rien démarre donc thémée, et une instance revenue à l'upstream le
+reste tant que son `.env` le dit — mais le prochain `git pull` ne le lui
+rappellera pas. C'est le fichier qui décide, pas le dépôt.
 
 ## Espacer les tâches planifiées
 
