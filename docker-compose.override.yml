@@ -40,14 +40,14 @@ services:
     # `DJANGO_SETTINGS_MODULE=qfieldcloud.settings_custom` (dans .env) fait
     # charger le premier ; le second devient le dossier `custom/` du statique.
     #
-    # THÈME DÉSACTIVÉ. Décommenter ces trois lignes ET celle de worker_wrapper,
-    # en même temps que le DJANGO_SETTINGS_MODULE de .env : le gabarit charge
-    # `custom/theme.css` de lui-même, sans rien demander aux réglages Django.
-    # Le laisser monté après un retour arrière garde la palette du thème.
-    # volumes:
-    #   - ../theme/settings_custom.py:/usr/src/app/qfieldcloud/settings_custom.py:ro
-    #   - ../theme/static:/usr/src/app/qfieldcloud/core/staticfiles/custom:ro
-    #   - ../theme/account-base.html:/usr/src/app/qfieldcloud/core/templates/account/base.html:ro
+    # THÈME ACTIF. Ces trois lignes se recommentent avec celle de worker_wrapper
+    # et le DJANGO_SETTINGS_MODULE de .env : le gabarit charge `custom/theme.css`
+    # de lui-même, sans rien demander aux réglages Django. Le laisser monté après
+    # un retour arrière garde la palette du thème.
+    volumes:
+      - ../theme/settings_custom.py:/usr/src/app/qfieldcloud/settings_custom.py:ro
+      - ../theme/static:/usr/src/app/qfieldcloud/core/staticfiles/custom:ro
+      - ../theme/account-base.html:/usr/src/app/qfieldcloud/core/templates/account/base.html:ro
     # 9,8 Go d'origine, pour l'application la plus bavarde de la pile.
     logging: *logging-cap
 
@@ -169,10 +169,10 @@ services:
 
   worker_wrapper:
     # Même module de réglages que l'app : il lui faut donc le même fichier.
-    # THÈME DÉSACTIVÉ, voir `app`. Se décommente avec lui, jamais tout seul :
+    # THÈME ACTIF, voir `app`. Se recommente avec lui, jamais tout seul :
     # sans ce fichier, le worker ne démarre pas sous `settings_custom`.
-    # volumes:
-    #   - ../theme/settings_custom.py:/usr/src/app/qfieldcloud/settings_custom.py:ro
+    volumes:
+      - ../theme/settings_custom.py:/usr/src/app/qfieldcloud/settings_custom.py:ro
     logging: *logging-cap
 
   # Les deux services à usage unique : ils tournent au démarrage puis sortent,
