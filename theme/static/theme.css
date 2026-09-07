@@ -199,6 +199,19 @@ body > * {
   box-shadow: 0 0 0 0.2rem rgba(74, 111, 174, 0.22);
 }
 
+/* Un champ verrouillé reste de l'information à lire, pas un champ mort.
+ * Bootstrap lui impose un gris clair EN DUR (`#e9ecef`), et `:disabled` bat en
+ * spécificité la règle `.form-control` du thème : en variante sombre, cela
+ * donnait du texte presque blanc sur fond presque blanc. On reprend la main
+ * avec les variables, donc valable dans les deux variantes d'un coup. */
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: var(--qfc-ground);
+  border-color: var(--qfc-line);
+  color: var(--qfc-muted);
+  cursor: not-allowed;
+}
+
 label {
   color: var(--qfc-muted);
   font-size: 0.9rem;
