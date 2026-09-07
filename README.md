@@ -525,6 +525,19 @@ chaque `migrate` (`make plans-dry` montre ce qui changerait sans rien écrire).
 La commande ne CRÉE aucun plan — ceux-là appartiennent à l'upstream — n'écrit
 que les champs déclarés, et est idempotente.
 
+Un mot sur la nature des deux plans, parce qu'elle se lit de travers.
+`community` et `organization` ne sont **pas deux échelons** d'une même grille :
+`Plan.user_type` les sépare, et l'upstream choisit à la création d'un compte le
+plan par défaut **de son type**. Un compte personnel ne peut pas recevoir le
+plan organisation, et on ne « passe » pas de l'un à l'autre. Surtout, le quota
+d'un compte ne mesure QUE les projets qu'il **possède**
+(`storage_used_bytes` filtre sur `user.projects`) : un membre qui pousse dans
+un projet d'organisation consomme le quota de l'organisation, pas le sien. Si
+votre montage fait porter les projets par une organisation, les quotas
+personnels ne seront jamais consommés — d'où la valeur basse livrée pour
+`community`, qui évite de gonfler les « promesses » de la page avec ce que
+personne ne réclamera.
+
 Ce qui mord vraiment, vérifié dans le code : `storage_mb`,
 `storage_keep_versions` (le multiplicateur silencieux — dix versions d'un
 paquet de 500 Mo, ce sont 5 Go), `is_external_db_supported`,
@@ -550,7 +563,7 @@ la page dise simplement qu'elle ne sait pas.
 
 Ce que la page calcule vraiment, elle, est le **surengagement** : la somme des
 quotas ACCORDÉS à tous les comptes n'a aucune raison de tenir dans la capacité
-réelle. Promettre 2 Go à vingt comptes, c'est promettre 40 Go. Ce n'est pas une
+réelle. Promettre 10 Go à vingt comptes, c'est promettre 200 Go. Ce n'est pas une
 erreur en soi — on le pratique sciemment, comme une banque — mais c'est la
 différence entre le choisir et le découvrir quand le bucket est plein.
 

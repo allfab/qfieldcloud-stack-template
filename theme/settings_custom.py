@@ -70,6 +70,12 @@ INSTANCE_STORAGE_CAPACITY_BYTES = 50 * 1000**3  # 50 Go
 # `synchronizations_per_months` ne sont lus nulle part dans le code. Les régler
 # ne limite rien.
 #
+# Attention enfin : `community` et `organization` ne sont PAS deux échelons
+# d'une même grille. `Plan.user_type` les sépare, et l'upstream choisit à la
+# création d'un compte le plan par défaut DE SON TYPE — un compte personnel ne
+# peut pas recevoir le plan organisation, et on ne « passe » pas de l'un à
+# l'autre.
+#
 # Les valeurs ci-dessous sont serrées à dessein : une instance auto-hébergée à
 # quelques comptes n'a pas les 10 Go par personne d'une offre commerciale.
 # Élargir est une décision d'exploitant, et la page « Plans et quotas » vous
@@ -81,10 +87,17 @@ INSTANCE_STORAGE_CAPACITY_BYTES = 50 * 1000**3  # 50 Go
 # quota. Réduire `storage_mb` sans les réduire fait donc échouer la commande —
 # c'est voulu, `Plan.save()` appelle `full_clean()`.
 INSTANCE_PLANS = {
+    # Le quota d'un compte ne mesure QUE les projets qu'il possède
+    # (`storage_used_bytes` filtre sur `user.projects`). Si votre montage fait
+    # porter les projets par une organisation, les comptes personnels ne
+    # consommeront jamais rien : leur quota n'est alors qu'une promesse qui
+    # gonfle le total de la page « Plans et quotas » sans que personne ne la
+    # réclame. D'où une valeur basse — de quoi faire un essai personnel, pas de
+    # quoi héberger un second usage en parallèle.
     "community": {
-        "storage_mb": 2_000,
-        "storage_threshold_warning_bytes": 400_000_000,
-        "storage_threshold_critical_bytes": 150_000_000,
+        "storage_mb": 500,
+        "storage_threshold_warning_bytes": 100_000_000,
+        "storage_threshold_critical_bytes": 40_000_000,
         "storage_keep_versions": 3,
         # L'upstream le laisse à False, et on le suit : autoriser PostGIS pour
         # un compte personnel suppose que les conteneurs QGIS éphémères

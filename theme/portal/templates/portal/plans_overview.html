@@ -211,6 +211,15 @@
 </div>
 
 <p class="text-muted mt-3">
-  {% blocktrans %}Pour changer un plan, éditer ses quotas, ajouter du stockage ou suspendre un abonnement, passez par <a href="/admin/subscription/">l'administration</a> — c'est elle qui écrit.{% endblocktrans %}
+  {% comment %}
+    Deux champs de `Plan` sont déclarés par l'upstream et lus NULLE PART dans
+    son code. Les afficher sans le dire laisserait croire à des garde-fous qui
+    n'existent pas.
+  {% endcomment %}
+  {% trans "La colonne « Minutes » (job_minutes) est déclarée par l'upstream mais n'est lue nulle part dans son code : la régler ne limite rien. Il en va de même de synchronizations_per_months, non affichée ici." %}
+</p>
+
+<p class="text-muted">
+  {% blocktrans %}Pour changer un plan, éditer ses quotas, ajouter du stockage ou suspendre un abonnement, passez par <a href="/admin/subscription/">l'administration</a> — c'est elle qui écrit. Sur ce dépôt, les quotas se déclarent plutôt dans <code>INSTANCE_PLANS</code> et s'appliquent par <code>make plans</code>, pour qu'ils survivent à une remise en service.{% endblocktrans %}
 </p>
 {% endblock content %}
