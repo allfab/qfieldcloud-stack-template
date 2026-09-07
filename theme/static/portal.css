@@ -68,6 +68,17 @@ html {
  * Le portail y ajoute un menu déroulant, qui serait rogné net. */
 .qfc-portal .navbar.bg-primary {
   overflow: visible;
+  /* theme.css remonte CHAQUE enfant direct du body en `z-index: 1`, pour les
+   * faire passer devant le filigrane de courbes. Le bandeau et le contenu se
+   * retrouvent donc au même niveau — et à niveau égal, c'est l'ordre du
+   * document qui tranche : le contenu, écrit après, passait devant. Le menu
+   * déroulant du compte s'ouvrait bien, mais SOUS la page, hors d'atteinte de
+   * la souris. On sort le bandeau du match, au niveau que Bootstrap réserve
+   * aux barres fixes.
+   *
+   * `overflow: visible` est l'autre moitié : theme.css pose `overflow: hidden`
+   * pour contenir le filigrane du bandeau, ce qui rognerait le menu net. */
+  z-index: 1030;
   /* Le padding horizontal passe au conteneur intérieur, sinon il s'ajoute au
    * sien et le logo ne s'aligne plus sur le contenu de la page. */
   padding-left: 0;
