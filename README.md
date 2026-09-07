@@ -390,8 +390,8 @@ Ce qui est en place :
 
 | Page | Chemin | Ce qu'elle fait |
 |---|---|---|
-| Mes projets | `/` | Liste des projets visibles, avec recherche, filtre de visibilité et tri |
-| Profil | `/a/<user>/` | Le même tableau, restreint à un propriétaire ; avatar, biographie, organisations |
+| Accueil | `/` | Tout ce que le compte peut voir, y compris les projets d'autrui où il collabore ; recherche, filtre de visibilité et tri |
+| Mes projets / profil | `/a/<user>/` | Le même tableau, restreint à ce qu'un compte POSSÈDE ; avatar, biographie, organisations |
 | Projets publics | `/projects/public/` | Les projets ouverts à tous les comptes de l'instance |
 | Compte utilisateur | `/settings/<user>/` | Prénom, nom, adresse e-mail, comptes externes liés |
 | Profil | `/settings/<user>/profile/` | Avatar, biographie, organisme, localisation, fuseau horaire |

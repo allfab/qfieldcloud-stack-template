@@ -166,7 +166,7 @@ class DashboardView(LoginRequiredMixin, ProjectListMixin, TemplateView):
     """La page d'accueil d'un utilisateur connecté : ses projets."""
 
     template_name = "portal/dashboard.html"
-    extra_context = {"nav_section": "projects"}
+    extra_context = {"nav_section": "home"}
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -198,7 +198,6 @@ class UserProfileView(LoginRequiredMixin, ProjectListMixin, TemplateView):
     """
 
     template_name = "portal/dashboard.html"
-    extra_context = {"nav_section": "projects"}
 
     def get(self, request, *args, **kwargs):
         # Une organisation possède des projets, donc son nom apparaît partout
@@ -233,6 +232,9 @@ class UserProfileView(LoginRequiredMixin, ProjectListMixin, TemplateView):
             {
                 "profile_user": profile_user,
                 "is_own_profile": is_own_profile,
+                # « Mes projets » ne se surligne que sur SON propre profil ;
+                # sur celui d'un autre, aucun onglet ne correspond.
+                "nav_section": "projects" if is_own_profile else "",
                 "avatar_url": get_avatar_url(profile_user, self.request),
                 "organizations": Organization.objects.of_user(profile_user).filter(
                     membership_role_is_public=True
@@ -482,7 +484,7 @@ class ProjectMixin(LoginRequiredMixin):
             {
                 "project": project,
                 "project_tab": self.project_tab,
-                "nav_section": "projects",
+                "nav_section": "",
                 # Les onglets se dessinent d'après les mêmes fonctions que les
                 # gardes : un onglet affiché est un onglet accessible.
                 "can_read_files": perms.can_read_files(user, project),
@@ -778,7 +780,7 @@ class OrganizationMixin(LoginRequiredMixin):
             {
                 "organization": organization,
                 "organization_tab": self.organization_tab,
-                "nav_section": "projects",
+                "nav_section": "",
                 "avatar_url": get_avatar_url(organization, self.request),
                 "is_organization_admin": perms.can_create_members(user, organization),
             }
@@ -1166,7 +1168,6 @@ class CreateOrganizationView(LoginRequiredMixin, CreateView):
 
     template_name = "portal/organization_new.html"
     form_class = OrganizationForm
-    extra_context = {"nav_section": "projects"}
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and not perms.can_create_organizations(

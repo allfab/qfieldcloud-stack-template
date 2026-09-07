@@ -41,8 +41,18 @@
 
     <div class="collapse navbar-collapse" id="portalNav">
       <ul class="navbar-nav ml-auto align-items-md-center">
+        {% comment %}
+          Les deux ne montrent pas la même chose. « Accueil » (`/`) liste TOUT
+          ce que le compte peut voir, y compris les projets d'autrui où il est
+          collaborateur. « Mes projets » (`/a/<moi>/`) ne liste que ce qu'il
+          possède.
+        {% endcomment %}
         <li class="nav-item">
-          <a class="nav-link {% if nav_section == 'projects' %}active{% endif %}" href="{% url 'index' %}">{% trans "Mes projets" %}</a>
+          <a class="nav-link {% if nav_section == 'home' %}active{% endif %}" href="{% url 'index' %}">{% trans "Accueil" %}</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if nav_section == 'projects' %}active{% endif %}"
+             href="{% url 'portal_user_profile' request.user.username %}">{% trans "Mes projets" %}</a>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if nav_section == 'public' %}active{% endif %}" href="{% url 'portal_public_projects' %}">{% trans "Projets publics" %}</a>
