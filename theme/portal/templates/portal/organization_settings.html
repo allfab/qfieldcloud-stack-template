@@ -1,0 +1,59 @@
+{% extends 'portal/organization_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block organization_content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="settings">
+
+      <div class="qfc-card-header">
+        <h2 class="card-title mb-0">{% trans "Réglages" %}</h2>
+        <button type="submit" class="btn btn-outline-success">{% trans "Enregistrer" %}</button>
+      </div>
+
+      <div class="form-group">
+        <label for="organization-name-readonly">{% trans "Nom de l'organisation" %}</label>
+        <input type="text" id="organization-name-readonly" class="form-control"
+               value="{{ organization.username }}" disabled>
+        <small class="form-text text-muted">
+          {% trans "Le nom ne se change pas : il est dans l'adresse de chacun des projets de l'organisation." %}
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label for="organization-owner-readonly">{% trans "Propriétaire" %}</label>
+        <input type="text" id="organization-owner-readonly" class="form-control"
+               value="{{ organization.organization_owner.username }}" disabled>
+        <small class="form-text text-muted">
+          {% trans "Transférer une organisation engage tout son contenu : cela se fait depuis l'administration." %}
+        </small>
+      </div>
+
+      {% bootstrap_form settings_form %}
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    {# `enctype` est obligatoire : sans lui le logo n'arrive jamais au serveur. #}
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="profile">
+
+      <div class="qfc-card-header">
+        <h2 class="card-title mb-0">{% trans "Profil public" %}</h2>
+        <button type="submit" class="btn btn-outline-success">{% trans "Enregistrer" %}</button>
+      </div>
+
+      {% if avatar_url %}
+        <img src="{{ avatar_url }}" alt="{{ organization.username }}" class="qfc-avatar mb-3">
+      {% endif %}
+
+      {% bootstrap_form profile_form %}
+    </form>
+  </div>
+</div>
+{% endblock organization_content %}

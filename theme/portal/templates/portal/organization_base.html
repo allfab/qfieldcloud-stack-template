@@ -25,6 +25,10 @@
      href="{% url 'portal_organization_members' organization.username %}">{% trans "Membres" %}</a>
   <a class="qfc-tab {% if organization_tab == 'teams' %}active{% endif %}"
      href="{% url 'portal_organization_teams' organization.username %}">{% trans "Équipes" %}</a>
+  {% if can_update_organization %}
+    <a class="qfc-tab {% if organization_tab == 'settings' %}active{% endif %}"
+       href="{% url 'portal_organization_settings' organization.username %}">{% trans "Réglages" %}</a>
+  {% endif %}
 </nav>
 
 {% block organization_content %}{% endblock organization_content %}

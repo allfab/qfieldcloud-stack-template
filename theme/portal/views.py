@@ -44,6 +44,8 @@ from qfieldcloud.portal.forms import (
     CollaboratorRoleForm,
     NotificationsForm,
     OrganizationForm,
+    OrganizationProfileForm,
+    OrganizationSettingsForm,
     ProfileForm,
     TeamForm,
 )
@@ -785,6 +787,7 @@ class OrganizationMixin(LoginRequiredMixin):
                 "nav_section": "",
                 "avatar_url": get_avatar_url(organization, self.request),
                 "is_organization_admin": perms.can_create_members(user, organization),
+                "can_update_organization": perms.can_update_user(user, organization),
             }
         )
         return context
@@ -1335,3 +1338,64 @@ class PlansOverviewView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVie
 
         context.update({"rows": rows, "sort": sort})
         return context
+
+
+class OrganizationSettingsView(OrganizationMixin, TemplateView):
+    """Les réglages de l'organisation.
+
+    Gardée par `can_update_user`, la fonction de l'upstream qui répond à
+    « cette personne peut-elle modifier ce compte ? » — vraie pour le compte
+    lui-même et pour les administrateurs de l'organisation. C'est la même que
+    l'API applique sur `users/<username>/`.
+
+    Deux formulaires sur une page, chacun son bouton : les réglages tiennent
+    sur `Organization`, le profil sur son `UserAccount`. Un seul formulaire
+    devrait écrire deux modèles, ce qui coûterait plus qu'il ne rendrait.
+    """
+
+    template_name = "portal/organization_settings.html"
+    organization_tab = "settings"
+    permission_check = staticmethod(perms.can_update_user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.get_organization()
+
+        context.update(
+            {
+                "settings_form": kwargs.get("settings_form")
+                or OrganizationSettingsForm(instance=organization),
+                "profile_form": kwargs.get("profile_form")
+                or OrganizationProfileForm(instance=organization.useraccount),
+            }
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        organization = self.get_organization()
+
+        if request.POST.get("action") == "profile":
+            form = OrganizationProfileForm(
+                request.POST, request.FILES, instance=organization.useraccount
+            )
+            if not form.is_valid():
+                return self.render_to_response(self.get_context_data(profile_form=form))
+
+            form.save()
+            messages.success(request, _("Le profil a été enregistré."))
+        else:
+            form = OrganizationSettingsForm(request.POST, instance=organization)
+            if not form.is_valid():
+                return self.render_to_response(
+                    self.get_context_data(settings_form=form)
+                )
+
+            form.save()
+            messages.success(request, _("Les réglages ont été enregistrés."))
+
+        return HttpResponseRedirect(
+            reverse(
+                "portal_organization_settings",
+                kwargs={"organization_name": organization.username},
+            )
+        )

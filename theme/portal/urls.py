@@ -81,6 +81,11 @@ urlpatterns = [
         name="portal_organization_teams",
     ),
     path(
+        "o/<str:organization_name>/settings/",
+        views.OrganizationSettingsView.as_view(),
+        name="portal_organization_settings",
+    ),
+    path(
         "o/<str:organization_name>/teams/<str:team_name>/",
         views.OrganizationTeamView.as_view(),
         name="portal_organization_team",

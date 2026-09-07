@@ -408,6 +408,7 @@ Ce qui est en place :
 | Organisation — projets | `/o/<orga>/` | Les projets de l'organisation |
 | Organisation — membres | `/o/<orga>/members/` | Ajout, rôle, retrait, plafond du plan |
 | Organisation — équipes | `/o/<orga>/teams/` | Création, suppression |
+| Organisation — réglages | `/o/<orga>/settings/` | Rôle par défaut des membres, profil public |
 | Équipe | `/o/<orga>/teams/<équipe>/` | Membres de l'équipe |
 | Plans et quotas | `/plans/` | **Exploitant.** Tous les comptes, leur plan, leur remplissage |
 

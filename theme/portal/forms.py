@@ -192,3 +192,47 @@ class AddTeamMemberForm(forms.Form):
         label=_("Nom d'utilisateur ou adresse e-mail"),
         max_length=254,
     )
+
+
+class OrganizationSettingsForm(forms.ModelForm):
+    """Les réglages d'une organisation qui se changent après coup.
+
+    Le nom n'y est pas : il est dans l'adresse de chacun des projets de
+    l'organisation, comme le nom d'utilisateur d'une personne. Le propriétaire
+    non plus — le transférer engage tout le contenu, et l'admin le fait.
+    """
+
+    class Meta:
+        model = Organization
+        fields = ("default_project_role_for_members",)
+        labels = {
+            "default_project_role_for_members": _(
+                "Rôle par défaut des membres sur les projets"
+            ),
+        }
+        help_texts = {
+            "default_project_role_for_members": _(
+                "Accordé automatiquement à tout membre non-administrateur sur "
+                "tous les projets de l'organisation. Laisser vide pour n'accorder "
+                "aucun accès automatique."
+            ),
+        }
+
+
+class OrganizationProfileForm(forms.ModelForm):
+    """Le profil public d'une organisation.
+
+    Une organisation a un `UserAccount` comme n'importe quel compte. On n'en
+    expose que ce qui la décrit — ni fuseau horaire ni visibilité de l'adresse,
+    qui ne veulent rien dire pour elle.
+    """
+
+    class Meta:
+        model = UserAccount
+        fields = ("avatar", "bio", "company", "location")
+        labels = {
+            "avatar": _("Logo"),
+            "bio": _("Description"),
+            "company": _("Organisme de rattachement"),
+            "location": _("Localisation"),
+        }
