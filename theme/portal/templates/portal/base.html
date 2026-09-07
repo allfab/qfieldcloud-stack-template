@@ -64,6 +64,7 @@
           </a>
           <div class="dropdown-menu dropdown-menu-right" aria-labelledby="portalUserMenu">
             <a class="dropdown-item" href="{% url 'portal_user_profile' request.user.username %}">{% trans "Mon profil" %}</a>
+            <a class="dropdown-item" href="{% url 'portal_settings_organizations' request.user.username %}">{% trans "Mes organisations" %}</a>
             <a class="dropdown-item" href="{% url 'portal_settings_account' request.user.username %}">{% trans "Réglages" %}</a>
             {% if perms.subscription.view_subscription %}
               <div class="dropdown-divider"></div>
