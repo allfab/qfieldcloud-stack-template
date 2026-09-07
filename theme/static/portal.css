@@ -7,6 +7,45 @@
  * Bootstrap 4.6 en dessous, comme les pages publiques.
  */
 
+/* --- La largeur de page ------------------------------------------------- */
+
+/* Une largeur STABLE, d'un onglet à l'autre. Deux causes se cumulaient :
+ *
+ * 1. `.container` de Bootstrap avance par PALIERS (540, 720, 960, 1140 px)
+ *    au lieu de suivre la fenêtre. Deux pages regardées dans la même fenêtre
+ *    peuvent tomber de part et d'autre d'un palier.
+ * 2. Une page longue a une barre de défilement verticale, une page courte
+ *    n'en a pas. Cela retire une quinzaine de pixels à la fenêtre — assez
+ *    pour franchir un palier, et la page saute de 1140 à 960 px en changeant
+ *    d'onglet.
+ *
+ * On règle les deux : une largeur maximale continue plutôt que des paliers,
+ * et une gouttière de défilement réservée en permanence. */
+:root {
+  --qfc-page-width: 1180px;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Repli pour les navigateurs sans `scrollbar-gutter` : la barre est toujours
+ * là, moins élégant mais tout aussi stable. */
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;
+  }
+}
+
+/* `.qfc-portal .container` (0,2,0) bat les règles de Bootstrap (0,1,0), y
+ * compris celles posées dans ses media queries. */
+.qfc-portal .container {
+  max-width: var(--qfc-page-width);
+  width: 100%;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
 /* --- Le fond ------------------------------------------------------------ */
 
 /* theme.css pose les courbes de niveau en filigrane plein écran : bien pour
@@ -29,6 +68,10 @@
  * Le portail y ajoute un menu déroulant, qui serait rogné net. */
 .qfc-portal .navbar.bg-primary {
   overflow: visible;
+  /* Le padding horizontal passe au conteneur intérieur, sinon il s'ajoute au
+   * sien et le logo ne s'aligne plus sur le contenu de la page. */
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .qfc-portal .navbar-brand {
