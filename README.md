@@ -410,7 +410,7 @@ Ce qui est en place :
 | Organisation — équipes | `/o/<orga>/teams/` | Création, suppression |
 | Organisation — réglages | `/o/<orga>/settings/` | Rôle par défaut des membres, profil public |
 | Équipe | `/o/<orga>/teams/<équipe>/` | Membres de l'équipe |
-| Plans et quotas | `/plans/` | **Exploitant.** Tous les comptes avec leur plan et leur remplissage, puis le catalogue des plans et ce que chacun accorde |
+| Plans et quotas | `/plans/` | **Exploitant.** Le stockage de l'instance (consommé / promis / capacité), tous les comptes avec leur remplissage, puis le catalogue des plans |
 
 Ce qui n'y est pas, et pourquoi :
 
@@ -508,6 +508,19 @@ chaque ligne en `Person` ou en `Organization` — le `select_related` est bien
 tout repart en requêtes ligne par ligne. La page part donc de `UserAccount`,
 qui n'a pas cette mécanique, et qui est de toute façon le vrai sujet : un plan
 appartient au compte, pas à la personne.
+
+**Le stockage de l'instance se déclare, il ne se mesure pas.** Les fichiers de
+projet vivent dans un bucket objet ; Django n'a aucun moyen d'en connaître
+l'espace libre, et cela relève de la supervision de l'hôte, pas d'une vue web.
+`INSTANCE_STORAGE_CAPACITY_BYTES`, dans `theme/settings_custom.py`, porte donc
+une capacité **déclarée** — laissez-la à `None` et la page le dit plutôt que de
+deviner.
+
+Ce que la page calcule vraiment, elle, est le **surengagement** : la somme des
+quotas ACCORDÉS à tous les comptes n'a aucune raison de tenir dans la capacité
+réelle. Promettre 10 Go à vingt comptes, c'est promettre 200 Go. Ce n'est pas
+une erreur en soi — on le pratique sciemment, comme une banque — mais c'est la
+différence entre le choisir et le découvrir quand le bucket est plein.
 
 ### Retirer le portail
 

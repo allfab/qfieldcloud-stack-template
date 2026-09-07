@@ -603,3 +603,28 @@ html {
   font-size: 0.92rem;
   margin-bottom: 0.9rem;
 }
+
+/* Trois chiffres côte à côte, qui se replient en colonne sur mobile. */
+.qfc-storage-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 3rem;
+}
+
+.qfc-storage-summary > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.qfc-figure {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--qfc-blue-deep);
+  line-height: 1.2;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qfc-figure {
+    color: #dfe8f6;
+  }
+}

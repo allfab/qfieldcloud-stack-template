@@ -11,6 +11,7 @@ allauth.
 from collections import Counter
 
 from allauth.account.models import EmailAddress
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.views import PasswordChangeView
@@ -1354,7 +1355,29 @@ class PlansOverviewView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVie
             for plan in Plan.objects.all().order_by("user_type", "ordering", "code")
         ]
 
-        context.update({"rows": rows, "sort": sort, "plans": plans})
+        # Le surengagement. C'est la seule chose que cette page puisse dire du
+        # stockage réel, et personne ne la disait : la somme des quotas
+        # ACCORDÉS n'a aucune raison de tenir dans la capacité du bucket.
+        # Django ne peut pas mesurer cette capacité — elle est déclarée dans le
+        # module de réglages, ou absente, et la page le dit plutôt que de
+        # deviner.
+        total_used = sum(row["used_bytes"] for row in rows)
+        total_granted = sum(row["total_bytes"] for row in rows)
+        capacity = getattr(settings, "INSTANCE_STORAGE_CAPACITY_BYTES", None)
+
+        context.update(
+            {
+                "rows": rows,
+                "sort": sort,
+                "plans": plans,
+                "total_used": total_used,
+                "total_granted": total_granted,
+                "capacity": capacity,
+                "granted_ratio": (total_granted / capacity * 100) if capacity else None,
+                "used_ratio": (total_used / capacity * 100) if capacity else None,
+                "is_overcommitted": bool(capacity and total_granted > capacity),
+            }
+        )
         return context
 
 

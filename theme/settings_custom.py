@@ -29,6 +29,19 @@ INSTALLED_APPS = [*INSTALLED_APPS[:-1], "qfieldcloud.portal", INSTALLED_APPS[-1]
 
 ROOT_URLCONF = "qfieldcloud.urls_custom"
 
+# Capacité totale du stockage objet, en octets, ou None si vous ne la déclarez
+# pas. Elle est DÉCLARÉE, pas mesurée : les fichiers de projet vivent dans un
+# bucket S3 que Django n'a aucun moyen d'interroger sur son espace libre — cela
+# relève de la supervision de l'hôte, pas d'une vue web.
+#
+# Ce que ce chiffre sert : la page « Plans et quotas » compare ce qui est
+# CONSOMMÉ, ce qui est PROMIS (la somme des quotas accordés à tous les comptes)
+# et ce qui est déclaré ici. Promettre 10 Go à vingt comptes, c'est promettre
+# 200 Go — et rien ne vous le disait avant que le bucket ne soit plein.
+#
+# Exemples : 500 * 1000**3 pour 500 Go, 2 * 1000**4 pour 2 To.
+INSTANCE_STORAGE_CAPACITY_BYTES = None
+
 # Pages publiques (connexion, inscription, réinitialisation).
 WHITELABEL = {
     "site_title": INSTANCE_NAME,

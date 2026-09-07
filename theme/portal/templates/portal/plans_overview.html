@@ -9,6 +9,56 @@
   {% trans "Tous les comptes de l'instance, leur plan et leur remplissage. Cette page ne change rien : les plans, les abonnements et le stockage additionnel se règlent dans l'administration." %}
 </p>
 
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Le stockage de l'instance" %}</h2>
+
+    <div class="qfc-storage-summary">
+      <div>
+        <span class="qfc-figure">{{ total_used|filesizeformat }}</span>
+        <span class="text-muted">{% trans "consommé" %}</span>
+      </div>
+      <div>
+        <span class="qfc-figure">{{ total_granted|filesizeformat }}</span>
+        <span class="text-muted">{% trans "promis aux comptes" %}</span>
+      </div>
+      <div>
+        <span class="qfc-figure">
+          {% if capacity %}{{ capacity|filesizeformat }}{% else %}—{% endif %}
+        </span>
+        <span class="text-muted">{% trans "capacité déclarée" %}</span>
+      </div>
+    </div>
+
+    {% if capacity %}
+      <div class="progress qfc-storage-bar mt-3">
+        <div class="progress-bar {% if used_ratio >= 90 %}qfc-quota-critical{% elif used_ratio >= 75 %}qfc-quota-warning{% endif %}"
+             role="progressbar" style="width: {{ used_ratio|floatformat:0 }}%"
+             aria-valuenow="{{ used_ratio|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+      <p class="text-muted mb-0 mt-2">
+        {% blocktrans with pct=used_ratio|floatformat:0 %}{{ pct }} % de la capacité déclarée est réellement occupée.{% endblocktrans %}
+      </p>
+
+      {% if is_overcommitted %}
+        {% comment %}
+          Le surengagement n'est pas une erreur en soi — on le pratique
+          sciemment, comme une banque. Mais il doit être vu : c'est la
+          différence entre le choisir et le découvrir quand le bucket est
+          plein.
+        {% endcomment %}
+        <div class="alert alert-warning mt-3 mb-0">
+          {% blocktrans with granted=total_granted|filesizeformat cap=capacity|filesizeformat pct=granted_ratio|floatformat:0 %}Les quotas accordés totalisent {{ granted }} pour une capacité déclarée de {{ cap }}, soit {{ pct }} %. Tant que les comptes ne remplissent pas leur quota, rien ne casse — mais l'instance ne peut pas tenir toutes ses promesses en même temps.{% endblocktrans %}
+        </div>
+      {% endif %}
+    {% else %}
+      <p class="text-muted mb-0 mt-2">
+        {% trans "Aucune capacité déclarée : renseignez INSTANCE_STORAGE_CAPACITY_BYTES dans theme/settings_custom.py pour que cette page vous dise si les quotas accordés tiennent dans le stockage réel. Django ne peut pas la mesurer — les fichiers vivent dans un bucket objet." %}
+      </p>
+    {% endif %}
+  </div>
+</div>
+
 <form method="get" class="qfc-toolbar mb-3">
   <select name="sort" class="form-control qfc-toolbar-select" onchange="this.form.submit()"
           aria-label="{% trans 'Tri' %}">
