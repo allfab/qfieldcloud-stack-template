@@ -18,14 +18,16 @@
       {% trans "Un nom d'utilisateur existant l'ajoute directement. Une adresse e-mail inconnue envoie une invitation, si les inscriptions sont ouvertes." %}
     </p>
 
-    {% if not project.is_public and not project.owner.useraccount.current_subscription.plan.is_premium %}
+    {% if not project.is_public and not project.owner.is_organization %}
       {% comment %}
-        Le dire AVANT l'échec. `check_can_become_collaborator` refuse tout
-        collaborateur sur un projet privé quand le plan du propriétaire n'est
-        pas premium — ce qui est le cas du plan `community` par défaut.
+        Le dire AVANT l'échec, et le dire juste. Dans
+        `check_can_become_collaborator`, le contrôle « premium » est dans la
+        branche RÉSERVÉE aux projets dont le propriétaire est une personne, et
+        il porte sur le plan du COLLABORATEUR, pas sur celui du propriétaire.
+        Un projet d'organisation n'y passe jamais : y être membre suffit.
       {% endcomment %}
       <div class="alert alert-info mt-3 mb-0">
-        {% trans "Ce projet est privé et le plan de son propriétaire n'est pas premium : l'ajout sera refusé. Rendez le projet public, ou faites relever le plan par l'exploitant de l'instance." %}
+        {% trans "Ce projet est privé et appartient à une personne : seul un compte dont le plan est premium peut y être ajouté. Aucun des plans livrés ne l'est. Rendez le projet public, confiez-le à une organisation, ou faites relever le plan par l'exploitant de l'instance." %}
       </div>
     {% endif %}
   </div>

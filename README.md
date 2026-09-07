@@ -466,10 +466,13 @@ accepte la session Django et revérifie tout.
 source — un reste du frontal fermé. Il applique le plafond du plan,
 l'appartenance à l'organisation, le cas du doublon, et l'invitation par e-mail
 d'un inconnu ; il rend un message déjà traduit, que le portail affiche tel
-quel. Conséquence à connaître : `check_can_become_collaborator` **refuse tout
-collaborateur sur un projet privé** si le plan du propriétaire n'est pas
-premium — ce qui est le cas de `community` et de `organization` sur une
-instance neuve. Le portail le dit avant l'échec, sur la page elle-même.
+quel. Conséquence à connaître, et elle se lit de travers si on va vite :
+`check_can_become_collaborator` refuse un collaborateur sur un projet privé
+**dont le propriétaire est une personne**, quand le plan **du collaborateur**
+n'est pas premium — aucun plan livré ne l'est. Le contrôle est dans la branche
+`else` de la fonction : un projet appartenant à une **organisation** n'y passe
+jamais, et y ajouter quelqu'un demande seulement qu'il soit déjà membre de
+l'organisation. Le portail le dit avant l'échec, sur la page elle-même.
 
 Un mot pour qui édite ces gabarits. `DEBUG=0` active le loader de gabarits en
 cache : un fichier modifié dans `theme/portal/templates/` n'est **pas** relu, le
