@@ -410,7 +410,7 @@ Ce qui est en place :
 | Organisation — équipes | `/o/<orga>/teams/` | Création, suppression |
 | Organisation — réglages | `/o/<orga>/settings/` | Rôle par défaut des membres, profil public |
 | Équipe | `/o/<orga>/teams/<équipe>/` | Membres de l'équipe |
-| Plans et quotas | `/plans/` | **Exploitant.** Tous les comptes, leur plan, leur remplissage |
+| Plans et quotas | `/plans/` | **Exploitant.** Tous les comptes avec leur plan et leur remplissage, puis le catalogue des plans et ce que chacun accorde |
 
 Ce qui n'y est pas, et pourquoi :
 

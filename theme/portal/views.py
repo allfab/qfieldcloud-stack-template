@@ -8,6 +8,8 @@ porte déjà toutes les règles de visibilité, et le compte reste géré par
 allauth.
 """
 
+from collections import Counter
+
 from allauth.account.models import EmailAddress
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -55,7 +57,7 @@ from qfieldcloud.project.utils.projects_utils import (
     create_collaborator_by_username_or_email,
 )
 from qfieldcloud.subscription.exceptions import SubscriptionException
-from qfieldcloud.subscription.models import Package, PackageType
+from qfieldcloud.subscription.models import Package, PackageType, Plan
 
 # Les tris proposés par l'en-tête du tableau. Une allowlist, pas un
 # `order_by(request.GET[...])` : le paramètre vient du navigateur.
@@ -1336,7 +1338,23 @@ class PlansOverviewView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVie
             sort = "ratio"
             rows.sort(key=lambda row: row["ratio"], reverse=True)
 
-        context.update({"rows": rows, "sort": sort})
+        # Le catalogue des plans, sous la liste des comptes. Sans lui, la page
+        # dit qu'un compte est sur « community » sans dire ce que « community »
+        # donne — il fallait ouvrir l'admin pour le savoir. Le nombre de
+        # comptes par plan se compte sur les lignes déjà en main, pas en base.
+        accounts_per_plan = Counter(
+            row["plan"].pk for row in rows if row["plan"] is not None
+        )
+        plans = [
+            {
+                "plan": plan,
+                "is_person_plan": plan.user_type == User.Type.PERSON,
+                "accounts_count": accounts_per_plan.get(plan.pk, 0),
+            }
+            for plan in Plan.objects.all().order_by("user_type", "ordering", "code")
+        ]
+
+        context.update({"rows": rows, "sort": sort, "plans": plans})
         return context
 
 

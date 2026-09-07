@@ -75,7 +75,78 @@
   </div>
 </div>
 
+<h2 class="qfc-page-title mt-4">{% trans "Les plans de l'instance" %}</h2>
+<p class="text-muted">
+  {% trans "Ce que chaque plan accorde. Sur une instance auto-hébergée, ces valeurs sont des réglages d'exploitation, pas une grille tarifaire : relever une limite est une décision, pas un contournement." %}
+</p>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Plan" %}</th>
+          <th scope="col">{% trans "Pour" %}</th>
+          <th scope="col" class="text-center">{% trans "Comptes" %}</th>
+          <th scope="col" class="text-right">{% trans "Stockage" %}</th>
+          <th scope="col" class="text-center">{% trans "Versions" %}</th>
+          <th scope="col" class="text-center">{% trans "Minutes" %}</th>
+          <th scope="col">{% trans "BDD externe" %}</th>
+          <th scope="col">{% trans "Collab. sur projet privé" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in plans %}
+          <tr>
+            <td>
+              <strong>{{ entry.plan.display_name|default:entry.plan.code }}</strong>
+              {% if entry.plan.is_default %}
+                <span class="qfc-badge-visibility">{% trans "défaut" %}</span>
+              {% endif %}
+              {% if not entry.plan.is_public %}
+                <span class="qfc-badge-visibility">{% trans "non public" %}</span>
+              {% endif %}
+              <div class="qfc-project-description text-muted">{{ entry.plan.code }}</div>
+            </td>
+            <td class="text-nowrap">
+              {% if entry.is_person_plan %}{% trans "Personnes" %}{% else %}{% trans "Organisations" %}{% endif %}
+            </td>
+            <td class="text-center">{{ entry.accounts_count }}</td>
+            <td class="text-right text-nowrap">{{ entry.plan.storage_bytes|filesizeformat }}</td>
+            <td class="text-center">{{ entry.plan.storage_keep_versions }}</td>
+            <td class="text-center">{{ entry.plan.job_minutes }}</td>
+            <td>
+              {% if entry.plan.is_external_db_supported %}
+                <span class="qfc-status qfc-status-ok">{% trans "Autorisées" %}</span>
+              {% else %}
+                <span class="qfc-status qfc-status-failed">{% trans "Refusées" %}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% comment %}
+                Un plan non premium refuse TOUT collaborateur sur un projet
+                privé, quel que soit le plafond : la limite chiffrée ne
+                s'applique qu'aux plans premium. L'afficher seule laisserait
+                croire l'inverse.
+              {% endcomment %}
+              {% if not entry.plan.is_premium %}
+                <span class="qfc-status qfc-status-failed">{% trans "Aucun — plan non premium" %}</span>
+              {% elif entry.plan.max_premium_collaborators_per_private_project < 0 %}
+                {% trans "Sans limite" %}
+              {% else %}
+                {{ entry.plan.max_premium_collaborators_per_private_project }}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="qfc-empty text-muted">{% trans "Aucun plan défini." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <p class="text-muted mt-3">
-  {% blocktrans %}Pour changer un plan, ajouter du stockage ou suspendre un abonnement, passez par <a href="/admin/subscription/subscription/">l'administration</a> — c'est elle qui écrit.{% endblocktrans %}
+  {% blocktrans %}Pour changer un plan, éditer ses quotas, ajouter du stockage ou suspendre un abonnement, passez par <a href="/admin/subscription/">l'administration</a> — c'est elle qui écrit.{% endblocktrans %}
 </p>
 {% endblock content %}
