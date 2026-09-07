@@ -1,0 +1,37 @@
+{% extends 'portal/settings_base.html' %}
+{% load i18n %}
+
+{% block title_contents %}{% trans "Mes organisations" %}{% endblock %}
+
+{% block settings_content %}
+<div class="card">
+  <div class="card-body">
+    <div class="qfc-card-header">
+      <h2 class="card-title mb-0">{% trans "Mes organisations" %}</h2>
+      <a href="{% url 'portal_organization_new' %}" class="btn btn-outline-success">{% trans "Créer une organisation" %}</a>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Organisation" %}</th>
+          <th scope="col">{% trans "Mon rôle" %}</th>
+          <th scope="col">{% trans "Origine du rôle" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for organization in organizations %}
+          <tr>
+            <td><a href="{% url 'portal_organization' organization.username %}">{{ organization.username }}</a></td>
+            <td>{{ organization.membership_role }}</td>
+            <td class="text-muted">{{ organization.membership_role_origin }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="qfc-empty text-muted">{% trans "Vous n'appartenez à aucune organisation." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock settings_content %}

@@ -403,6 +403,13 @@ Ce qui est en place :
 | Projet — traitements | `/a/<user>/<projet>/jobs/` | Historique des jobs, avec leur sortie repliée |
 | Projet — modifications | `/a/<user>/<projet>/deltas/` | Ce qui est remonté du terrain, filtrable par état |
 | Projet — collaborateurs | `/a/<user>/<projet>/collaborators/` | Ajout, rôle, retrait |
+| Mes organisations | `/settings/<user>/organizations/` | Celles qu'on possède, celles où l'on est membre |
+| Nouvelle organisation | `/organizations/new/` | Création |
+| Organisation — projets | `/o/<orga>/` | Les projets de l'organisation |
+| Organisation — membres | `/o/<orga>/members/` | Ajout, rôle, retrait, plafond du plan |
+| Organisation — équipes | `/o/<orga>/teams/` | Création, suppression |
+| Équipe | `/o/<orga>/teams/<équipe>/` | Membres de l'équipe |
+| Plans et quotas | `/plans/` | **Exploitant.** Tous les comptes, leur plan, leur remplissage |
 
 Ce qui n'y est pas, et pourquoi :
 
@@ -411,9 +418,8 @@ Ce qui n'y est pas, et pourquoi :
   et une bibliothèque, donc un choix qui engage. Les couches sont listées, avec
   le message d'erreur de celles qui sont invalides — c'est ce qui explique un
   packaging en échec.
-- **Créer un projet, une organisation** — les modèles sont là, les écrans
-  restent à écrire. Un projet se crée depuis QGIS avec QFieldSync ; une
-  organisation, depuis l'admin.
+- **Créer un projet** — cela se fait depuis QGIS, avec QFieldSync. Le portail
+  ne double pas ce chemin.
 - **Les invitations** — l'écran existe côté upstream (`remaining_invitations`,
   `invitations_utils`), mais il n'a de sens qu'avec des inscriptions ouvertes.
   Tant que `QFIELDCLOUD_ACCOUNT_ADAPTER` vaut `AccountAdapterSignUpClosed`, il
@@ -429,7 +435,7 @@ Ce qui n'y est pas, et pourquoi :
 - **Supprimer son compte** — sur une instance auto-hébergée, c'est une décision
   d'exploitant. L'admin le fait.
 
-Quatre points de conception valent d'être connus.
+Six points de conception valent d'être connus.
 
 **L'adresse e-mail ne s'écrit pas directement.** Le formulaire de compte confie
 le changement à allauth (`EmailAddress.objects.add_new_email`) : un lien part à
@@ -471,6 +477,33 @@ sans quoi on corrige deux fois la même chose en croyant que le correctif ne
 prend pas. Et le commentaire de gabarit `{# … #}` ne vaut que sur **une** ligne :
 sur plusieurs, Django ne le reconnaît pas et le recopie dans la page. Le
 commentaire multiligne, c'est `{% comment %}`.
+
+**Les organisations vivent sous `/o/`, pas sous `/a/`.** Rien n'interdit
+d'appeler un projet « members » ou « teams » — le validateur de
+`Project.name` accepte toute lettre, chiffre, tiret, souligné ou point — donc
+`a/<orga>/members/` serait avalé par la route du détail projet. Les deux
+espaces sont séparés, et `/a/<orga>/` redirige vers `/o/<orga>/` pour que tous
+les liens qui affichent un propriétaire continuent de fonctionner.
+
+**« Plans et quotas » est gardé par une permission, pas par `is_staff`.**
+`PermissionRequiredMixin` avec `subscription.view_subscription` : la page lit
+des lignes `Subscription`, et la permission qui gouverne cette lecture existe
+déjà. Elle respecte les groupes — un groupe « support » sans accès aux
+abonnements n'aura pas la page — et un superuser l'a d'office, donc sur une
+instance simple le comportement est celui de `is_staff`.
+
+Son coût mérite un mot, parce que c'est ce qui la distingue de l'admin. Le
+stockage consommé, le nombre de projets et le stockage additionnel sont
+calculés en **trois requêtes groupées pour tous les comptes**, et l'abonnement
+courant vient de la vue SQL `current_subscriptions_vw` par `select_related`.
+Résultat mesuré : **9 requêtes, que l'instance ait 10 ou 150 comptes**. Un
+piège s'y cache, et il est signalé dans le code de l'upstream lui-même :
+`User.objects.get_queryset()` appelle `select_subclasses()`, qui reconstruit
+chaque ligne en `Person` ou en `Organization` — le `select_related` est bien
+émis, mais l'instance rendue n'est plus celle sur laquelle il a été résolu, et
+tout repart en requêtes ligne par ligne. La page part donc de `UserAccount`,
+qui n'a pas cette mécanique, et qui est de toute façon le vrai sujet : un plan
+appartient au compte, pas à la personne.
 
 ### Retirer le portail
 

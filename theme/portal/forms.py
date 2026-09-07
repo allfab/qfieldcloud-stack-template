@@ -7,9 +7,16 @@ changer lui-même.
 """
 
 from django import forms
+from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
 
-from qfieldcloud.core.models import Person, ProjectCollaborator, UserAccount
+from qfieldcloud.core.models import (
+    Organization,
+    OrganizationMember,
+    Person,
+    ProjectCollaborator,
+    UserAccount,
+)
 
 
 class AccountForm(forms.ModelForm):
@@ -110,3 +117,78 @@ class CollaboratorRoleForm(forms.ModelForm):
         model = ProjectCollaborator
         fields = ("role",)
         labels = {"role": _("Rôle")}
+
+
+class OrganizationForm(forms.ModelForm):
+    """Création d'une organisation.
+
+    `organization_owner` et `created_by` ne sont pas exposés : c'est la
+    personne qui remplit le formulaire, la vue les pose. Le compte, son
+    abonnement et son plan par défaut sont créés par `User.save()`, comme pour
+    n'importe quel compte.
+    """
+
+    class Meta:
+        model = Organization
+        fields = ("username", "default_project_role_for_members")
+        labels = {
+            "username": _("Nom de l'organisation"),
+            "default_project_role_for_members": _(
+                "Rôle par défaut des membres sur les projets"
+            ),
+        }
+        help_texts = {
+            "default_project_role_for_members": _(
+                "Laisser vide pour n'accorder aucun accès automatique."
+            ),
+        }
+
+
+class AddMemberForm(forms.Form):
+    """Ajout d'un membre à une organisation, par nom d'utilisateur ou e-mail."""
+
+    member = forms.CharField(
+        label=_("Nom d'utilisateur ou adresse e-mail"),
+        max_length=254,
+        widget=forms.TextInput(
+            attrs={"placeholder": _("nom-utilisateur ou adresse@exemple.org")}
+        ),
+    )
+    role = forms.ChoiceField(
+        label=_("Rôle"),
+        choices=OrganizationMember.Roles.choices,
+        initial=OrganizationMember.Roles.MEMBER,
+    )
+
+
+class TeamForm(forms.Form):
+    """Création d'une équipe.
+
+    Le nom saisi est le nom court ; l'upstream stocke `@organisation/équipe`
+    (voir `Team.format_team_name`), et c'est la vue qui compose. On valide donc
+    ici la partie que l'utilisateur écrit, pas la chaîne finale.
+    """
+
+    name = forms.CharField(
+        label=_("Nom de l'équipe"),
+        max_length=100,
+        validators=[
+            RegexValidator(
+                r"^[-a-zA-Z0-9_]+$",
+                _("Lettres, chiffres, tirets et soulignés seulement."),
+            )
+        ],
+    )
+
+
+class AddTeamMemberForm(forms.Form):
+    """Ajout d'un membre à une équipe.
+
+    Le modèle refuse déjà quelqu'un qui n'est pas membre de l'organisation
+    (`TeamMember.clean`) : rien à revalider ici.
+    """
+
+    member = forms.CharField(
+        label=_("Nom d'utilisateur ou adresse e-mail"),
+        max_length=254,
+    )

@@ -1,0 +1,12 @@
+{% extends 'portal/organization_base.html' %}
+{% load i18n %}
+
+{% block organization_content %}
+{% if organization.default_project_role_for_members %}
+  <p class="text-muted">
+    {% blocktrans with role=organization.get_default_project_role_for_members_display %}Tout membre non-administrateur reçoit d'office le rôle « {{ role }} » sur ces projets.{% endblocktrans %}
+  </p>
+{% endif %}
+
+{% include 'portal/_project_table.html' %}
+{% endblock organization_content %}

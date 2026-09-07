@@ -1,0 +1,94 @@
+{% extends 'portal/organization_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block organization_content %}
+{% if is_organization_admin %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Ajouter un membre" %}</h2>
+
+    <form method="post" class="qfc-toolbar">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      <div class="qfc-toolbar-grow">{% bootstrap_field add_form.member show_label=False %}</div>
+      <div>{% bootstrap_field add_form.role show_label=False %}</div>
+      <button type="submit" class="btn btn-primary">{% trans "Ajouter" %}</button>
+    </form>
+
+    {% if max_members >= 0 %}
+      <p class="text-muted mb-0">
+        {% blocktrans with count=members_count max=max_members %}{{ count }} membres sur {{ max }} autorisés par le plan, propriétaire compris.{% endblocktrans %}
+      </p>
+    {% else %}
+      <p class="text-muted mb-0">
+        {% blocktrans with count=members_count %}{{ count }} membres, propriétaire compris. Le plan n'impose pas de plafond.{% endblocktrans %}
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Membres" %}</h2>
+    <p class="text-muted mb-0">
+      {% blocktrans with owner=organization.organization_owner.username %}{{ owner }}, propriétaire de l'organisation, en est administrateur d'office et n'apparaît pas dans cette liste.{% endblocktrans %}
+    </p>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Membre" %}</th>
+          <th scope="col">{% trans "Rôle" %}</th>
+          <th scope="col">{% trans "Depuis" %}</th>
+          <th scope="col" class="text-right">{% trans "Actions" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+          <tr>
+            <td><a href="{% url 'portal_user_profile' member.member.username %}">{{ member.member.username }}</a></td>
+            <td>
+              {% if is_organization_admin %}
+                <form method="post" class="qfc-inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update">
+                  <input type="hidden" name="username" value="{{ member.member.username }}">
+                  <select name="role" class="form-control form-control-sm" onchange="this.form.submit()"
+                          aria-label="{% trans 'Rôle' %}">
+                    {% for value, label in roles %}
+                      <option value="{{ value }}" {% if member.role == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+              {% else %}
+                {{ member.get_role_display }}
+              {% endif %}
+            </td>
+            <td class="text-nowrap">{{ member.created_at|date:"d/m/Y" }}</td>
+            <td class="text-right">
+              {% if is_organization_admin %}
+                <form method="post" class="qfc-inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove">
+                  <input type="hidden" name="username" value="{{ member.member.username }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Retirer" %}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="qfc-empty text-muted">{% trans "Personne d'autre que le propriétaire." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_organization_admin %}
+  <p class="text-muted mt-3 mb-0">
+    {% trans "Retirer un membre retire aussi ses collaborations sur les projets de l'organisation et ses appartenances d'équipe." %}
+  </p>
+{% endif %}
+{% endblock organization_content %}

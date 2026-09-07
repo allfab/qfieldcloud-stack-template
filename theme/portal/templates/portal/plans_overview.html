@@ -1,0 +1,81 @@
+{% extends 'portal/base.html' %}
+{% load i18n %}
+
+{% block title_contents %}{% trans "Plans et quotas" %}{% endblock %}
+
+{% block content %}
+<h1 class="qfc-page-title">{% trans "Plans et quotas" %}</h1>
+<p class="text-muted">
+  {% trans "Tous les comptes de l'instance, leur plan et leur remplissage. Cette page ne change rien : les plans, les abonnements et le stockage additionnel se règlent dans l'administration." %}
+</p>
+
+<form method="get" class="qfc-toolbar mb-3">
+  <select name="sort" class="form-control qfc-toolbar-select" onchange="this.form.submit()"
+          aria-label="{% trans 'Tri' %}">
+    <option value="ratio" {% if sort == 'ratio' %}selected{% endif %}>{% trans "Les plus remplis d'abord" %}</option>
+    <option value="storage" {% if sort == 'storage' %}selected{% endif %}>{% trans "Le plus de stockage d'abord" %}</option>
+    <option value="name" {% if sort == 'name' %}selected{% endif %}>{% trans "Par nom" %}</option>
+  </select>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Compte" %}</th>
+          <th scope="col">{% trans "Plan" %}</th>
+          <th scope="col">{% trans "Abonnement" %}</th>
+          <th scope="col" class="text-center">{% trans "Projets" %}</th>
+          <th scope="col">{% trans "Stockage" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>
+              {% if row.is_organization %}
+                <span class="qfc-badge-visibility">{% trans "orga" %}</span>
+                <a href="{% url 'portal_organization' row.account.username %}">{{ row.account.username }}</a>
+              {% else %}
+                <a href="{% url 'portal_user_profile' row.account.username %}">{{ row.account.username }}</a>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.plan %}
+                {{ row.plan.display_name|default:row.plan.code }}
+              {% else %}
+                <span class="qfc-status qfc-status-failed">{% trans "Sans abonnement" %}</span>
+              {% endif %}
+            </td>
+            <td>{% if row.subscription %}{{ row.subscription.get_status_display }}{% else %}—{% endif %}</td>
+            <td class="text-center">{{ row.projects_count }}</td>
+            <td class="qfc-quota-cell">
+              <div class="progress qfc-storage-bar">
+                {% comment %}
+                  Au-delà de 90 %, la barre change de couleur : c'est l'unique
+                  raison d'être de la page — voir qui va être bloqué avant
+                  qu'il ne le soit.
+                {% endcomment %}
+                <div class="progress-bar {% if row.ratio >= 90 %}qfc-quota-critical{% elif row.ratio >= 75 %}qfc-quota-warning{% endif %}"
+                     role="progressbar" style="width: {{ row.ratio|floatformat:0 }}%"
+                     aria-valuenow="{{ row.ratio|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <span class="text-muted qfc-quota-label">
+                {{ row.used_bytes|filesizeformat }} / {{ row.total_bytes|filesizeformat }}
+                ({{ row.ratio|floatformat:0 }} %)
+              </span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="qfc-empty text-muted">{% trans "Aucun compte." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p class="text-muted mt-3">
+  {% blocktrans %}Pour changer un plan, ajouter du stockage ou suspendre un abonnement, passez par <a href="/admin/subscription/subscription/">l'administration</a> — c'est elle qui écrit.{% endblocktrans %}
+</p>
+{% endblock content %}

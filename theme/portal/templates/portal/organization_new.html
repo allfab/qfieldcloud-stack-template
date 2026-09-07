@@ -1,0 +1,28 @@
+{% extends 'portal/base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block title_contents %}{% trans "Nouvelle organisation" %}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-7 offset-lg-2">
+    <h1 class="qfc-page-title">{% trans "Nouvelle organisation" %}</h1>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {% bootstrap_form form %}
+          <div class="text-right">
+            <button type="submit" class="btn btn-primary">{% trans "Créer l'organisation" %}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <p class="text-muted mt-3">
+      {% trans "Une organisation possède ses propres projets et son propre quota de stockage. Vous en êtes le propriétaire et l'administrateur ; les membres que vous y ajoutez accèdent aux projets de l'organisation, pas aux vôtres." %}
+    </p>
+  </div>
+</div>
+{% endblock content %}

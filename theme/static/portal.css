@@ -551,3 +551,37 @@ html {
     color: #f2857c;
   }
 }
+
+/* --- Plans et quotas ----------------------------------------------------- */
+
+.qfc-quota-cell {
+  min-width: 14rem;
+}
+
+.qfc-quota-label {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+  white-space: nowrap;
+}
+
+/* Un compte proche de son quota se repère d'un coup d'œil ; le pourcentage
+ * écrit juste dessous porte l'information pour qui ne distingue pas les
+ * teintes. */
+.progress-bar.qfc-quota-warning {
+  background-color: #b8860b;
+}
+
+.progress-bar.qfc-quota-critical {
+  background-color: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  .progress-bar.qfc-quota-warning {
+    background-color: #d8a12a;
+  }
+
+  .progress-bar.qfc-quota-critical {
+    background-color: #e0645a;
+  }
+}

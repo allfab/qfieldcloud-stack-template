@@ -1,0 +1,31 @@
+{% extends 'portal/base.html' %}
+{% load i18n %}
+
+{% block title_contents %}{{ organization.username }}{% endblock %}
+
+{% block content %}
+<header class="qfc-settings-header">
+  {% if avatar_url %}
+    <img src="{{ avatar_url }}" alt="{{ organization.username }}" class="qfc-avatar qfc-avatar-sm">
+  {% else %}
+    <div class="qfc-avatar qfc-avatar-sm qfc-avatar-empty">{{ organization.username|first|upper }}</div>
+  {% endif %}
+  <div>
+    <h1 class="qfc-page-title mb-0">{{ organization.username }}</h1>
+    <p class="text-muted mb-0">
+      {% blocktrans with owner=organization.organization_owner.username %}Organisation, appartenant à {{ owner }}{% endblocktrans %}
+    </p>
+  </div>
+</header>
+
+<nav class="qfc-tabs">
+  <a class="qfc-tab {% if organization_tab == 'projects' %}active{% endif %}"
+     href="{% url 'portal_organization' organization.username %}">{% trans "Projets" %}</a>
+  <a class="qfc-tab {% if organization_tab == 'members' %}active{% endif %}"
+     href="{% url 'portal_organization_members' organization.username %}">{% trans "Membres" %}</a>
+  <a class="qfc-tab {% if organization_tab == 'teams' %}active{% endif %}"
+     href="{% url 'portal_organization_teams' organization.username %}">{% trans "Équipes" %}</a>
+</nav>
+
+{% block organization_content %}{% endblock organization_content %}
+{% endblock content %}

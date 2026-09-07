@@ -1,0 +1,63 @@
+{% extends 'portal/organization_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block organization_content %}
+<p class="qfc-breadcrumb">
+  <a href="{% url 'portal_organization_teams' organization.username %}">{% trans "Équipes" %}</a> /
+  <strong>{{ team.teamname }}</strong>
+</p>
+
+{% if is_organization_admin %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Ajouter à l'équipe" %}</h2>
+
+    <form method="post" class="qfc-toolbar">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      <div class="qfc-toolbar-grow">{% bootstrap_field add_form.member show_label=False %}</div>
+      <button type="submit" class="btn btn-primary">{% trans "Ajouter" %}</button>
+    </form>
+
+    <p class="text-muted mb-0">
+      {% trans "Seul un membre de l'organisation peut rejoindre une équipe." %}
+    </p>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{{ team.teamname }}</h2>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Membre" %}</th>
+          <th scope="col" class="text-right">{% trans "Actions" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in team_members %}
+          <tr>
+            <td><a href="{% url 'portal_user_profile' member.member.username %}">{{ member.member.username }}</a></td>
+            <td class="text-right">
+              {% if is_organization_admin %}
+                <form method="post" class="qfc-inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove">
+                  <input type="hidden" name="username" value="{{ member.member.username }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Retirer" %}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="2" class="qfc-empty text-muted">{% trans "Équipe vide." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock organization_content %}

@@ -52,6 +52,44 @@ urlpatterns = [
         views.PlanView.as_view(),
         name="portal_settings_plan",
     ),
+    path(
+        "settings/<str:username>/organizations/",
+        views.OrganizationsSettingsView.as_view(),
+        name="portal_settings_organizations",
+    ),
+    path(
+        "organizations/new/",
+        views.CreateOrganizationView.as_view(),
+        name="portal_organization_new",
+    ),
+    # Les organisations vivent sous `/o/`, pas sous `/a/` : un projet peut
+    # légitimement s'appeler « members » ou « teams », et `a/<user>/<projet>/`
+    # les avalerait. `/a/<organisation>/` redirige ici.
+    path(
+        "o/<str:organization_name>/",
+        views.OrganizationProjectsView.as_view(),
+        name="portal_organization",
+    ),
+    path(
+        "o/<str:organization_name>/members/",
+        views.OrganizationMembersView.as_view(),
+        name="portal_organization_members",
+    ),
+    path(
+        "o/<str:organization_name>/teams/",
+        views.OrganizationTeamsView.as_view(),
+        name="portal_organization_teams",
+    ),
+    path(
+        "o/<str:organization_name>/teams/<str:team_name>/",
+        views.OrganizationTeamView.as_view(),
+        name="portal_organization_team",
+    ),
+    path(
+        "plans/",
+        views.PlansOverviewView.as_view(),
+        name="portal_plans_overview",
+    ),
     # Le détail d'un projet. Attention : ce chemin OMBRE une route de
     # l'upstream, `a/<username>/<project_name>/`, qui redirigeait vers l'admin
     # — donc vers une page interdite pour un non-staff. C'est le seul endroit,
