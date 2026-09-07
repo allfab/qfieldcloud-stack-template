@@ -550,9 +550,19 @@ la page dise simplement qu'elle ne sait pas.
 
 Ce que la page calcule vraiment, elle, est le **surengagement** : la somme des
 quotas ACCORDÉS à tous les comptes n'a aucune raison de tenir dans la capacité
-réelle. Promettre 10 Go à vingt comptes, c'est promettre 200 Go. Ce n'est pas
-une erreur en soi — on le pratique sciemment, comme une banque — mais c'est la
+réelle. Promettre 2 Go à vingt comptes, c'est promettre 40 Go. Ce n'est pas une
+erreur en soi — on le pratique sciemment, comme une banque — mais c'est la
 différence entre le choisir et le découvrir quand le bucket est plein.
+
+Elle affiche pour cela **deux** mesures de l'occupation, et la distinction n'est
+pas comptable. `UserAccount.storage_used_bytes`, la propriété de l'upstream que
+les quotas appliquent, ne compte que les fichiers de type `PROJECT_FILE`. Or le
+bucket porte aussi les **paquets** préparés pour QField (`PACKAGE_FILE`), refaits
+à chaque packaging : ils occupent la place sans entrer dans le quota de
+personne. C'est donc le total du bucket, paquets compris, que la page compare à
+la capacité — c'est lui qui remplit le disque. Les miniatures de projet et les
+avatars restent hors décompte : ce ne sont pas des `FileVersion`, et ils pèsent
+des kilo-octets.
 
 ### Retirer le portail
 

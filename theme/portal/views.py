@@ -1363,6 +1363,16 @@ class PlansOverviewView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVie
         # deviner.
         total_used = sum(row["used_bytes"] for row in rows)
         total_granted = sum(row["total_bytes"] for row in rows)
+
+        # Deux mesures, pas une. `storage_used_bytes` de l'upstream ne compte
+        # que les fichiers de PROJET : c'est ce que les quotas facturent aux
+        # comptes. Mais le bucket porte aussi les PAQUETS générés pour QField,
+        # régénérés à chaque packaging et parfois aussi lourds que les projets
+        # eux-mêmes. C'est ce second total qui remplit le disque, donc c'est
+        # lui qu'on compare à la capacité.
+        total_bucket = (
+            FileVersion.objects.aggregate(total=Sum("size"))["total"] or 0
+        )
         capacity = getattr(settings, "INSTANCE_STORAGE_CAPACITY_BYTES", None)
 
         context.update(
@@ -1371,10 +1381,11 @@ class PlansOverviewView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVie
                 "sort": sort,
                 "plans": plans,
                 "total_used": total_used,
+                "total_bucket": total_bucket,
                 "total_granted": total_granted,
                 "capacity": capacity,
                 "granted_ratio": (total_granted / capacity * 100) if capacity else None,
-                "used_ratio": (total_used / capacity * 100) if capacity else None,
+                "bucket_ratio": (total_bucket / capacity * 100) if capacity else None,
                 "is_overcommitted": bool(capacity and total_granted > capacity),
             }
         )

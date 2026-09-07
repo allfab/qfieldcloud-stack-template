@@ -15,8 +15,12 @@
 
     <div class="qfc-storage-summary">
       <div>
+        <span class="qfc-figure">{{ total_bucket|filesizeformat }}</span>
+        <span class="text-muted">{% trans "occupé dans le stockage objet" %}</span>
+      </div>
+      <div>
         <span class="qfc-figure">{{ total_used|filesizeformat }}</span>
-        <span class="text-muted">{% trans "consommé" %}</span>
+        <span class="text-muted">{% trans "dont fichiers de projet" %}</span>
       </div>
       <div>
         <span class="qfc-figure">{{ total_granted|filesizeformat }}</span>
@@ -30,14 +34,24 @@
       </div>
     </div>
 
+    {% comment %}
+      La différence entre les deux premiers chiffres n'est pas un détail
+      comptable : ce sont les paquets générés pour QField, refaits à chaque
+      packaging. Ils remplissent le disque sans entrer dans le quota d'aucun
+      compte, donc sans que personne ne soit averti.
+    {% endcomment %}
+    <p class="text-muted mt-3 mb-0">
+      {% trans "Les quotas des comptes ne comptent que les fichiers de projet. Le stockage objet porte en plus les paquets préparés pour QField, refaits à chaque packaging — ils occupent la place sans entrer dans le quota de personne. Les miniatures et les avatars, eux, ne sont comptés nulle part : ils pèsent des kilo-octets." %}
+    </p>
+
     {% if capacity %}
       <div class="progress qfc-storage-bar mt-3">
-        <div class="progress-bar {% if used_ratio >= 90 %}qfc-quota-critical{% elif used_ratio >= 75 %}qfc-quota-warning{% endif %}"
-             role="progressbar" style="width: {{ used_ratio|floatformat:0 }}%"
-             aria-valuenow="{{ used_ratio|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+        <div class="progress-bar {% if bucket_ratio >= 90 %}qfc-quota-critical{% elif bucket_ratio >= 75 %}qfc-quota-warning{% endif %}"
+             role="progressbar" style="width: {{ bucket_ratio|floatformat:0 }}%"
+             aria-valuenow="{{ bucket_ratio|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
       <p class="text-muted mb-0 mt-2">
-        {% blocktrans with pct=used_ratio|floatformat:0 %}{{ pct }} % de la capacité déclarée est réellement occupée.{% endblocktrans %}
+        {% blocktrans with pct=bucket_ratio|floatformat:0 %}{{ pct }} % de la capacité déclarée est réellement occupée, paquets compris.{% endblocktrans %}
       </p>
 
       {% if is_overcommitted %}
