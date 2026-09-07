@@ -596,3 +596,10 @@ html {
     background-color: #e0645a;
   }
 }
+
+/* Une ligne de contexte au-dessus d'un tableau : elle dit ce que la liste
+ * contient, là où deux pages se ressemblent. */
+.qfc-lede {
+  font-size: 0.92rem;
+  margin-bottom: 0.9rem;
+}

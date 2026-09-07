@@ -180,6 +180,7 @@ class DashboardView(LoginRequiredMixin, ProjectListMixin, TemplateView):
             {
                 "profile_user": user,
                 "is_own_profile": True,
+                "dashboard_scope": "visible",
                 "avatar_url": get_avatar_url(user, self.request),
                 "organizations": Organization.objects.of_user(user),
                 "storage_used_bytes": account.storage_used_bytes,
@@ -232,6 +233,7 @@ class UserProfileView(LoginRequiredMixin, ProjectListMixin, TemplateView):
             {
                 "profile_user": profile_user,
                 "is_own_profile": is_own_profile,
+                "dashboard_scope": "owned",
                 # « Mes projets » ne se surligne que sur SON propre profil ;
                 # sur celui d'un autre, aucun onglet ne correspond.
                 "nav_section": "projects" if is_own_profile else "",

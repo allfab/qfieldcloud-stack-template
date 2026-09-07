@@ -64,6 +64,25 @@
   </aside>
 
   <div class="col-lg-9">
+    {% comment %}
+      Les deux tableaux se ressemblent mais ne disent pas la même chose, et
+      rien dans la page ne le montrait : « Accueil » liste tout ce qui est
+      visible, un profil ne liste que ce qui appartient à son titulaire.
+    {% endcomment %}
+    {% if dashboard_scope == 'visible' %}
+      <p class="qfc-lede text-muted">
+        {% trans "Tous les projets auxquels vous avez accès : les vôtres, et ceux d'autres comptes où vous êtes collaborateur." %}
+      </p>
+    {% elif is_own_profile %}
+      <p class="qfc-lede text-muted">
+        {% trans "Les projets dont vous êtes propriétaire. Ceux où vous êtes seulement collaborateur sont sur l'accueil." %}
+      </p>
+    {% else %}
+      <p class="qfc-lede text-muted">
+        {% blocktrans with username=profile_user.username %}Les projets de {{ username }} que vous pouvez voir.{% endblocktrans %}
+      </p>
+    {% endif %}
+
     {% include 'portal/_project_table.html' %}
   </div>
 
