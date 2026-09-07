@@ -53,7 +53,7 @@
         <h2 class="qfc-section-title">{% trans "Organisations" %}</h2>
         {% for organization in organizations %}
           <div class="qfc-org-row">
-            <span>{{ organization.username }}</span>
+            <a href="{% url 'portal_organization' organization.username %}">{{ organization.username }}</a>
             <span class="text-muted">{{ organization.membership_role }}</span>
           </div>
         {% empty %}
