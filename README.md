@@ -35,6 +35,7 @@ principe, même prix — pas une ligne de `src/`. Voir « Portail utilisateur »
 | `scripts/` | Sauvegarde du bucket et test de restauration. À appeler par le `Makefile` (`make backup`, `make restore-test`), pas directement |
 | `theme/` | Apparence de l'instance : logos, couleurs, textes. **Livré actif.** Chargé par `DJANGO_SETTINGS_MODULE`, sans rien modifier dans `src/`. Voir « Thème » |
 | `theme/portal/` | Portail utilisateur : les pages que l'upstream ne livre pas. Application Django montée dans l'image, mise devant l'URLconf upstream par `theme/urls_custom.py`. Voir « Portail utilisateur » |
+| `theme/portal/management/` | La commande `apply_instance_plans`, qui aligne les quotas des plans sur `INSTANCE_PLANS`. Appelée par `make plans` |
 | `.gitignore` | Exclut `.env` — il contient vos secrets |
 
 ## Démarrage, d'un dossier vide à une instance qui répond
@@ -76,6 +77,7 @@ cd ..
 make up
 cd src
 dc exec app python manage.py migrate
+cd .. && make plans && cd src   # quotas des plans : voir INSTANCE_PLANS
 dc run --rm app python manage.py collectstatic --noinput
 dc exec --user root app python manage.py compilemessages
 dc exec app python manage.py createsuperuser
@@ -509,12 +511,42 @@ tout repart en requêtes ligne par ligne. La page part donc de `UserAccount`,
 qui n'a pas cette mécanique, et qui est de toute façon le vrai sujet : un plan
 appartient au compte, pas à la personne.
 
+**Les quotas des plans sont une valeur versionnée, pas un réglage d'admin.**
+`community` et `organization` viennent d'une migration de l'upstream
+(`subscription/0002_populate_plans`) qui ne les crée que s'ils n'existent pas :
+une instance neuve hérite toujours des valeurs d'OPENGIS.ch, taillées pour une
+offre hébergée — 10 Go par personne, dix versions gardées par fichier. Les
+retoucher dans l'admin marche, mais ne se rejoue pas : remontez l'instance
+ailleurs et vous repartez des valeurs upstream sans que rien ne vous le
+rappelle.
+
+D'où `INSTANCE_PLANS` dans `theme/settings_custom.py`, et `make plans` après
+chaque `migrate` (`make plans-dry` montre ce qui changerait sans rien écrire).
+La commande ne CRÉE aucun plan — ceux-là appartiennent à l'upstream — n'écrit
+que les champs déclarés, et est idempotente.
+
+Ce qui mord vraiment, vérifié dans le code : `storage_mb`,
+`storage_keep_versions` (le multiplicateur silencieux — dix versions d'un
+paquet de 500 Mo, ce sont 5 Go), `is_external_db_supported`,
+`max_organization_members` et `is_premium`. Ce qui ne mord pas, malgré son nom :
+`job_minutes` et `synchronizations_per_months` ne sont lus **nulle part** dans
+le code de l'upstream. Les régler ne limite rien.
+
+Un piège de nommage, enfin : `storage_threshold_warning_bytes` et
+`..._critical_bytes` sont des octets **restants**, pas des pourcentages, et
+l'upstream refuse un seuil supérieur ou égal au quota. Réduire `storage_mb`
+sans les réduire fait échouer la commande — `Plan.save()` appelle
+`full_clean()`, et c'est tant mieux : l'incohérence est refusée avant d'entrer
+en base.
+
 **Le stockage de l'instance se déclare, il ne se mesure pas.** Les fichiers de
 projet vivent dans un bucket objet ; Django n'a aucun moyen d'en connaître
 l'espace libre, et cela relève de la supervision de l'hôte, pas d'une vue web.
 `INSTANCE_STORAGE_CAPACITY_BYTES`, dans `theme/settings_custom.py`, porte donc
-une capacité **déclarée** — laissez-la à `None` et la page le dit plutôt que de
-deviner.
+une capacité **déclarée**. Le template en livre une par défaut — 50 Go, un
+placeholder au même titre qu'`INSTANCE_NAME` — pour que la page montre à quoi
+elle ressemble dès le premier démarrage ; mettez la vôtre, ou `None` pour que
+la page dise simplement qu'elle ne sait pas.
 
 Ce que la page calcule vraiment, elle, est le **surengagement** : la somme des
 quotas ACCORDÉS à tous les comptes n'a aucune raison de tenir dans la capacité

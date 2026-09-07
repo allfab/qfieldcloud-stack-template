@@ -8,7 +8,7 @@ COMPOSE = cd src && docker compose --env-file ../.env
 # DEBUG_QGIS_WORKER_HOST_PATH, elle, est sans emploi.
 IGNORED_VARS = DEBUG_QGIS_WORKER_HOST_PATH WEB_BIND_IP STORAGE_API_BIND_IP STORAGE_CONSOLE_BIND_IP SMTP4DEV_BIND_IP SMTP4DEV_WEB_BIND_IP WEBDAV_BIND_IP S3_BACKUP_ENDPOINT S3_BACKUP_ACCESS_KEY S3_BACKUP_SECRET_KEY S3_BACKUP_BUCKET
 
-.PHONY: up down config ps logs migrate check backup restore-test static theme-diff
+.PHONY: up down config ps logs migrate check backup restore-test static theme-diff plans plans-dry
 
 up:      ; $(COMPOSE) up -d --build
 down:    ; $(COMPOSE) down
@@ -18,6 +18,12 @@ logs:    ; $(COMPOSE) logs -f $(S)
 migrate: ; $(COMPOSE) exec app python manage.py migrate
 check:   ; python3 src/scripts/check_envvars.py .env --docker-compose-dir src --ignored-varnames $(IGNORED_VARS)
 static:  ; $(COMPOSE) exec app python manage.py collectstatic --noinput
+
+# Les quotas des plans sont une valeur versionnée, pas un réglage d'admin : voir
+# INSTANCE_PLANS dans theme/settings_custom.py. À rejouer après chaque `migrate`,
+# et `make plans-dry` pour voir ce qui changerait sans rien écrire.
+plans:     ; $(COMPOSE) exec app python manage.py apply_instance_plans
+plans-dry: ; $(COMPOSE) exec app python manage.py apply_instance_plans --dry-run
 
 # Le thème ne copie qu'UN fichier de l'upstream : account/base.html. On garde la
 # version d'origine à côté et on la compare après chaque montée de version. Sortie
