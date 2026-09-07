@@ -32,6 +32,7 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Person,
     ProjectCollaborator,
+    Secret,
     Team,
     TeamMember,
     User,
@@ -45,11 +46,13 @@ from qfieldcloud.portal.forms import (
     AddMemberForm,
     AddTeamMemberForm,
     CollaboratorRoleForm,
+    AddSecretForm,
     NotificationsForm,
     OrganizationForm,
     OrganizationProfileForm,
     OrganizationSettingsForm,
     ProfileForm,
+    ProjectSettingsForm,
     TeamForm,
 )
 from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
@@ -498,6 +501,10 @@ class ProjectMixin(LoginRequiredMixin):
                 "can_list_jobs": perms.can_list_jobs(user, project),
                 "can_read_deltas": perms.can_read_deltas(user, project),
                 "can_read_collaborators": perms.can_read_collaborators(user, project),
+                "can_read_project_secrets": perms.can_read_project_secrets(
+                    user, project
+                ),
+                "can_update_project": perms.can_update_project(user, project),
             }
         )
         return context
@@ -1449,5 +1456,186 @@ class OrganizationSettingsView(OrganizationMixin, TemplateView):
             reverse(
                 "portal_organization_settings",
                 kwargs={"organization_name": organization.username},
+            )
+        )
+
+
+class ProjectSettingsView(ProjectMixin, TemplateView):
+    """Les réglages d'un projet, et sa suppression.
+
+    Gardée par `can_update_project` — administrateur ou gestionnaire du projet.
+    La suppression, elle, demande `can_delete_project`, contrôlée séparément :
+    les deux rôles y ont droit chez l'upstream, mais rien ne garantit que cela
+    reste vrai, et c'est la fonction qui décide, pas nous.
+    """
+
+    template_name = "portal/project_settings.html"
+    project_tab = "settings"
+    permission_check = staticmethod(perms.can_update_project)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.get_project()
+        subscription = project.owner.useraccount.current_subscription
+
+        form = kwargs.get("form") or ProjectSettingsForm(instance=project)
+
+        # Un plan non premium ignore la valeur par projet : la laisser saisir
+        # ferait croire à un réglage qui n'a aucun effet.
+        if not subscription.plan.is_premium:
+            field = form.fields["storage_keep_versions"]
+            field.disabled = True
+            field.help_text = _(
+                "Le plan du propriétaire n'est pas premium : c'est la valeur du "
+                "plan (%(count)s) qui s'applique, quelle que soit celle-ci."
+            ) % {"count": subscription.plan.storage_keep_versions}
+
+        context.update(
+            {
+                "form": form,
+                "can_delete_project": perms.can_delete_project(
+                    self.request.user, project
+                ),
+            }
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        project = self.get_project()
+
+        if request.POST.get("action") == "delete":
+            return self.delete_project(request, project)
+
+        form = ProjectSettingsForm(request.POST, instance=project)
+        if not form.is_valid():
+            return self.render_to_response(self.get_context_data(form=form))
+
+        form.save()
+        messages.success(request, _("Les réglages du projet ont été enregistrés."))
+
+        # Renommer un projet change son adresse : on redirige vers la nouvelle,
+        # sinon l'utilisateur atterrit sur un 404 après avoir enregistré.
+        return HttpResponseRedirect(
+            reverse(
+                "portal_project_settings",
+                kwargs={
+                    "username": project.owner.username,
+                    "project_name": project.name,
+                },
+            )
+        )
+
+    def delete_project(self, request, project):
+        if not perms.can_delete_project(request.user, project):
+            raise PermissionDenied
+
+        # On exige le nom écrit à la main. Un projet supprimé emporte ses
+        # fichiers, ses versions et son historique : une confirmation qu'on
+        # peut donner par réflexe n'en est pas une.
+        if request.POST.get("confirm_name", "") != project.name:
+            messages.error(
+                request,
+                _("Le nom saisi ne correspond pas : le projet n'a pas été supprimé."),
+            )
+            return HttpResponseRedirect(self.get_tab_url(project))
+
+        owner_username = project.owner.username
+        name = project.name
+        project.delete()
+        messages.success(
+            request, _('Le projet « %(name)s » a été supprimé.') % {"name": name}
+        )
+
+        return HttpResponseRedirect(
+            reverse("portal_user_profile", kwargs={"username": owner_username})
+        )
+
+    def get_tab_url(self, project) -> str:
+        return reverse(
+            "portal_project_settings",
+            kwargs={
+                "username": project.owner.username,
+                "project_name": project.name,
+            },
+        )
+
+
+class ProjectSecretsView(ProjectMixin, TemplateView):
+    """Les secrets d'un projet : variables d'environnement et services PostgreSQL.
+
+    Réservée aux administrateurs du projet — `can_read_project_secrets` n'admet
+    que le rôle ADMIN, pas MANAGER, contrairement aux réglages.
+
+    Un secret s'ajoute et se retire, il ne se modifie pas : `value` est un
+    `EncryptedTextField` et l'upstream ne prévoit aucune relecture en clair.
+    Proposer une édition supposerait de réafficher la valeur.
+    """
+
+    template_name = "portal/project_secrets.html"
+    project_tab = "secrets"
+    permission_check = staticmethod(perms.can_read_project_secrets)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.get_project()
+        user = self.request.user
+
+        context.update(
+            {
+                "secrets": project.secrets.select_related(
+                    "assigned_to", "created_by"
+                ).order_by("name"),
+                "add_form": kwargs.get("add_form")
+                or AddSecretForm(project=project),
+                "can_create_secrets": perms.can_create_project_secrets(user, project),
+                "can_delete_secrets": perms.can_delete_project_secrets(user, project),
+            }
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        project = self.get_project()
+        action = request.POST.get("action", "add")
+
+        if action == "add":
+            if not perms.can_create_project_secrets(request.user, project):
+                raise PermissionDenied
+
+            form = AddSecretForm(request.POST, project=project)
+            form.instance.project = project
+            form.instance.created_by = request.user
+            if not form.is_valid():
+                return self.render_to_response(self.get_context_data(add_form=form))
+
+            form.save()
+            messages.success(
+                request,
+                _('Le secret « %(name)s » a été ajouté.')
+                % {"name": form.instance.name},
+            )
+
+        elif action == "remove":
+            if not perms.can_delete_project_secrets(request.user, project):
+                raise PermissionDenied
+
+            secret = get_object_or_404(
+                Secret, project=project, name=request.POST.get("name", "")
+            )
+            name = secret.name
+            secret.delete()
+            messages.success(
+                request, _('Le secret « %(name)s » a été retiré.') % {"name": name}
+            )
+
+        else:
+            raise PermissionDenied
+
+        return HttpResponseRedirect(
+            reverse(
+                "portal_project_secrets",
+                kwargs={
+                    "username": project.owner.username,
+                    "project_name": project.name,
+                },
             )
         )

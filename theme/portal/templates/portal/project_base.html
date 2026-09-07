@@ -53,6 +53,14 @@
     <a class="qfc-tab {% if project_tab == 'collaborators' %}active{% endif %}"
        href="{% url 'portal_project_collaborators' project.owner.username project.name %}">{% trans "Collaborateurs" %}</a>
   {% endif %}
+  {% if can_read_project_secrets %}
+    <a class="qfc-tab {% if project_tab == 'secrets' %}active{% endif %}"
+       href="{% url 'portal_project_secrets' project.owner.username project.name %}">{% trans "Secrets" %}</a>
+  {% endif %}
+  {% if can_update_project %}
+    <a class="qfc-tab {% if project_tab == 'settings' %}active{% endif %}"
+       href="{% url 'portal_project_settings' project.owner.username project.name %}">{% trans "Réglages" %}</a>
+  {% endif %}
 </nav>
 
 {% block project_content %}{% endblock project_content %}

@@ -15,8 +15,10 @@ from qfieldcloud.core.models import (
     OrganizationMember,
     Person,
     ProjectCollaborator,
+    Secret,
     UserAccount,
 )
+from qfieldcloud.project.models import Project
 
 
 class AccountForm(forms.ModelForm):
@@ -236,3 +238,96 @@ class OrganizationProfileForm(forms.ModelForm):
             "company": _("Organisme de rattachement"),
             "location": _("Localisation"),
         }
+
+
+class ProjectSettingsForm(forms.ModelForm):
+    """Les réglages d'un projet.
+
+    Aucune contrainte n'est réécrite : `Project.save()` appelle `clean()`, que
+    le `full_clean()` du formulaire déclenche aussi — le type de projet hors
+    liste et le rôle public hors liste sont donc refusés par l'upstream, pas
+    par nous.
+
+    `storage_keep_versions` n'est honoré que si le plan du propriétaire est
+    premium (`owner_aware_storage_keep_versions`). La vue le verrouille sinon,
+    plutôt que de laisser saisir une valeur sans effet.
+    """
+
+    class Meta:
+        model = Project
+        fields = (
+            "name",
+            "description",
+            "project_type",
+            "is_public",
+            "public_collaborator_role",
+            "overwrite_conflicts",
+            "has_restricted_projectfiles",
+            "is_attachment_download_on_demand",
+            "storage_keep_versions",
+            "packaging_offliner",
+        )
+        labels = {
+            "name": _("Nom"),
+            "description": _("Description"),
+            "project_type": _("Type de projet"),
+            "is_public": _("Projet public"),
+            "public_collaborator_role": _("Rôle accordé à tous si le projet est public"),
+            "overwrite_conflicts": _("Écraser les conflits"),
+            "has_restricted_projectfiles": _("Restreindre les fichiers de projet"),
+            "is_attachment_download_on_demand": _(
+                "Télécharger les pièces jointes à la demande"
+            ),
+            "storage_keep_versions": _("Versions de fichier à conserver"),
+            "packaging_offliner": _("Moteur de packaging"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        # Le type de projet n'est configurable que sur deux valeurs : la
+        # troisième, `shared_datasets`, se pose à la création et l'upstream la
+        # refuse ensuite. L'offrir au choix serait offrir une erreur.
+        super().__init__(*args, **kwargs)
+        self.fields["project_type"].choices = [
+            (value, label)
+            for value, label in self.fields["project_type"].choices
+            if value in Project.CONFIGURABLE_PROJECT_TYPES
+        ]
+
+
+class AddSecretForm(forms.ModelForm):
+    """Ajout d'un secret de projet.
+
+    `value` est un `EncryptedTextField` : il est chiffré en base, et l'upstream
+    ne prévoit aucune relecture en clair. Un secret s'ajoute et se retire, il ne
+    se modifie pas — d'où l'absence de formulaire d'édition.
+    """
+
+    class Meta:
+        model = Secret
+        fields = ("name", "type", "value", "assigned_to")
+        labels = {
+            "name": _("Nom"),
+            "type": _("Type"),
+            "value": _("Valeur"),
+            "assigned_to": _("Réservé à"),
+        }
+        help_texts = {
+            "assigned_to": _(
+                "Laisser vide pour que le secret vaille pour tout le projet. "
+                "Sinon, il ne s'applique qu'à ce collaborateur."
+            ),
+        }
+        widgets = {
+            "value": forms.PasswordInput(render_value=False),
+        }
+
+    def __init__(self, *args, project=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.project = project
+        # `Secret.clean()` refuse un `assigned_to` qui n'est pas collaborateur
+        # du projet ; autant ne proposer que ceux qui le sont.
+        if project is not None:
+            self.fields["assigned_to"].queryset = Person.objects.for_project(
+                project=project, skip_invalid=True
+            )
+        self.fields["assigned_to"].required = False

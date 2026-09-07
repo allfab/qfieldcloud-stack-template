@@ -124,4 +124,14 @@ urlpatterns = [
         views.ProjectCollaboratorsView.as_view(),
         name="portal_project_collaborators",
     ),
+    path(
+        "a/<str:username>/<str:project_name>/secrets/",
+        views.ProjectSecretsView.as_view(),
+        name="portal_project_secrets",
+    ),
+    path(
+        "a/<str:username>/<str:project_name>/settings/",
+        views.ProjectSettingsView.as_view(),
+        name="portal_project_settings",
+    ),
 ]

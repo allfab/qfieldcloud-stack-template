@@ -628,3 +628,19 @@ html {
     color: #dfe8f6;
   }
 }
+
+/* Une carte dont l'action est irréversible : le liseré de tête vire au rouge
+ * pour qu'on ne la confonde pas avec les autres. */
+.qfc-danger-card::before {
+  background: #b3261e;
+}
+
+.qfc-danger-card .card-title {
+  color: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qfc-danger-card .card-title {
+    color: #f2857c;
+  }
+}

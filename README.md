@@ -405,6 +405,8 @@ Ce qui est en place :
 | Projet — traitements | `/a/<user>/<projet>/jobs/` | Historique des jobs, avec leur sortie repliée |
 | Projet — modifications | `/a/<user>/<projet>/deltas/` | Ce qui est remonté du terrain, filtrable par état |
 | Projet — collaborateurs | `/a/<user>/<projet>/collaborators/` | Ajout, rôle, retrait |
+| Projet — secrets | `/a/<user>/<projet>/secrets/` | Variables d'environnement et services PostgreSQL, chiffrés. **Administrateur du projet seulement** |
+| Projet — réglages | `/a/<user>/<projet>/settings/` | Nom, visibilité, conflits, versions gardées, moteur de packaging, suppression |
 | Mes organisations | `/settings/<user>/organizations/` | Celles qu'on possède, celles où l'on est membre |
 | Nouvelle organisation | `/organizations/new/` | Création |
 | Organisation — projets | `/o/<orga>/` | Les projets de l'organisation |
@@ -423,6 +425,10 @@ Ce qui n'y est pas, et pourquoi :
   packaging en échec.
 - **Créer un projet** — cela se fait depuis QGIS, avec QFieldSync. Le portail
   ne double pas ce chemin.
+- **Cloner un projet et transférer sa propriété** — deux actions que
+  l'application de référence propose sur la page de réglages. Le clonage passe
+  par le champ `clone_from_project` à la création, le transfert engage tout le
+  contenu du projet : les deux méritent mieux qu'un bouton ajouté en passant.
 - **Les invitations** — l'écran existe côté upstream (`remaining_invitations`,
   `invitations_utils`), mais il n'a de sens qu'avec des inscriptions ouvertes.
   Tant que `QFIELDCLOUD_ACCOUNT_ADAPTER` vaut `AccountAdapterSignUpClosed`, il
@@ -551,6 +557,20 @@ l'upstream refuse un seuil supérieur ou égal au quota. Réduire `storage_mb`
 sans les réduire fait échouer la commande — `Plan.save()` appelle
 `full_clean()`, et c'est tant mieux : l'incohérence est refusée avant d'entrer
 en base.
+
+**Les secrets sont réservés aux administrateurs du projet, pas aux
+gestionnaires.** `can_read_project_secrets` n'admet que le rôle `ADMIN`, là où
+`can_update_project` admet aussi `MANAGER` : un gestionnaire règle le projet
+sans voir ses identifiants. L'onglet suit cette règle, donc il disparaît pour
+lui. Un secret s'ajoute et se retire mais ne se modifie pas — `value` est un
+`EncryptedTextField` et rien ne le relit en clair ; proposer une édition
+supposerait de réafficher la valeur.
+
+**`storage_keep_versions` par projet n'est honoré que pour un plan premium.**
+`owner_aware_storage_keep_versions` retombe sinon sur la valeur du plan. Le
+champ est donc verrouillé quand le plan du propriétaire ne l'est pas, avec la
+valeur qui s'appliquera réellement — plutôt que de laisser saisir un réglage
+sans effet.
 
 **Le stockage de l'instance se déclare, il ne se mesure pas.** Les fichiers de
 projet vivent dans un bucket objet ; Django n'a aucun moyen d'en connaître

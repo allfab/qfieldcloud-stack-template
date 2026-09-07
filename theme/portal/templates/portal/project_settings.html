@@ -1,0 +1,55 @@
+{% extends 'portal/project_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block project_content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+
+      <div class="qfc-card-header">
+        <h2 class="card-title mb-0">{% trans "Réglages du projet" %}</h2>
+        <button type="submit" class="btn btn-outline-success">{% trans "Enregistrer" %}</button>
+      </div>
+
+      <div class="alert alert-warning">
+        {% trans "Ces réglages changent le comportement du projet pour tous ses collaborateurs, y compris sur les téléphones déjà synchronisés." %}
+      </div>
+
+      {% bootstrap_form form %}
+
+      {% comment %}
+        Renommer change l'adresse du projet. La vue redirige vers la nouvelle,
+        mais un lien noté ailleurs, lui, ne suivra pas.
+      {% endcomment %}
+      <p class="text-muted mb-0">
+        {% trans "Renommer le projet change son adresse : les liens déjà partagés ne suivront pas." %}
+      </p>
+    </form>
+  </div>
+</div>
+
+{% if can_delete_project %}
+<div class="card qfc-danger-card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Supprimer ce projet" %}</h2>
+    <p>
+      {% trans "La suppression emporte les fichiers, toutes leurs versions, les traitements et les modifications remontées. Il n'y a pas de retour en arrière." %}
+    </p>
+
+    <form method="post" class="qfc-toolbar">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <div class="qfc-toolbar-grow">
+        <label class="sr-only" for="confirm-name">{% trans "Nom du projet" %}</label>
+        <input type="text" id="confirm-name" name="confirm_name" class="form-control"
+               placeholder="{% blocktrans with name=project.name %}Saisissez « {{ name }} » pour confirmer{% endblocktrans %}"
+               autocomplete="off">
+      </div>
+      <button type="submit" class="btn btn-danger">{% trans "Supprimer le projet" %}</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock project_content %}
