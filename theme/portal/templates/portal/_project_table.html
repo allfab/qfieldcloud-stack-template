@@ -55,11 +55,7 @@
                   <span class="qfc-badge-visibility" title="{% trans 'Projet privé' %}">{% trans "privé" %}</span>
                 {% endif %}
 
-                {% if can_open_project %}
-                  <a href="/a/{{ project.owner.username }}/{{ project.name }}/">{{ project.owner.username }} / <strong>{{ project.name }}</strong></a>
-                {% else %}
-                  <span>{{ project.owner.username }} / <strong>{{ project.name }}</strong></span>
-                {% endif %}
+                <a href="{% url 'portal_project' project.owner.username project.name %}">{{ project.owner.username }} / <strong>{{ project.name }}</strong></a>
               </div>
               {% if project.description %}
                 <div class="qfc-project-description text-muted">{{ project.description|truncatechars:120 }}</div>

@@ -1,0 +1,109 @@
+{% extends 'portal/project_base.html' %}
+{% load i18n %}
+
+{% block project_content %}
+<div class="row">
+  <div class="col-lg-7 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="card-title">{% trans "Projet QGIS" %}</h2>
+        {% if qgis_project %}
+          <dl class="qfc-facts">
+            <dt>{% trans "Fichier" %}</dt><dd>{{ project.the_qgis_file_name|default:"—" }}</dd>
+            <dt>{% trans "Nom QGIS" %}</dt><dd>{{ qgis_project.name|default:"—" }}</dd>
+            <dt>{% trans "Version QGIS" %}</dt><dd>{{ qgis_project.qgis_version|default:"—" }}</dd>
+            <dt>{% trans "Système de coordonnées" %}</dt><dd>{{ qgis_project.crs|default:"—" }}</dd>
+          </dl>
+        {% else %}
+          <p class="text-muted mb-0">
+            {% trans "Aucun fichier QGIS n'a encore été lu. Poussez le projet depuis QGIS avec QFieldSync." %}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="card-title">{% trans "Chiffres" %}</h2>
+        <dl class="qfc-facts">
+          <dt>{% trans "Stockage" %}</dt><dd>{{ project.file_storage_bytes|filesizeformat }}</dd>
+          <dt>{% trans "Fichiers" %}</dt><dd>{{ project.project_files_count }}</dd>
+          <dt>{% trans "Collaborateurs" %}</dt><dd>{{ collaborators_count }}</dd>
+          <dt>{% trans "Créé le" %}</dt><dd>{{ project.created_at|date:"d/m/Y" }}</dd>
+          <dt>{% trans "Données modifiées" %}</dt><dd>{{ project.data_last_updated_at|date:"d/m/Y H:i"|default:"—" }}</dd>
+          <dt>{% trans "Dernier paquet" %}</dt><dd>{{ project.data_last_packaged_at|date:"d/m/Y H:i"|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if qgis_project %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Couches" %}</h2>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Nom" %}</th>
+          <th scope="col">{% trans "Source" %}</th>
+          <th scope="col">{% trans "Projection" %}</th>
+          <th scope="col">{% trans "État" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for layer in qgis_project.layers.all %}
+          <tr>
+            <td>{{ layer.name }}</td>
+            <td class="text-muted">{{ layer.provider_name|default:"—" }}</td>
+            <td class="text-muted">{{ layer.crs|default:"—" }}</td>
+            <td>
+              {% if layer.is_valid %}
+                <span class="qfc-status qfc-status-ok">{% trans "Valide" %}</span>
+              {% else %}
+                {% comment %}
+                  Une couche invalide est LA cause la plus fréquente d'un
+                  packaging en échec : autant donner le message du moteur
+                  plutôt qu'un mot générique.
+                {% endcomment %}
+                <span class="qfc-status qfc-status-failed">{% trans "Invalide" %}</span>
+                {% if layer.error_summary %}
+                  <div class="qfc-project-description text-muted">{{ layer.error_summary }}</div>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="qfc-empty text-muted">{% trans "Aucune couche lue." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Derniers traitements" %}</h2>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <tbody>
+        {% for job in recent_jobs %}
+          <tr>
+            <td>{{ job.get_type_display }}</td>
+            <td><span class="qfc-status qfc-status-{{ job.status }}">{{ job.get_status_display }}</span></td>
+            <td class="text-muted text-right">{{ job.created_at|date:"d/m/Y H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="qfc-empty text-muted">{% trans "Aucun traitement." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock project_content %}

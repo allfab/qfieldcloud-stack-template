@@ -1,0 +1,55 @@
+{% extends 'portal/project_base.html' %}
+{% load i18n %}
+
+{% block project_content %}
+<form method="get" class="qfc-toolbar mb-3">
+  <select name="status" class="form-control qfc-toolbar-select" onchange="this.form.submit()"
+          aria-label="{% trans 'État' %}">
+    <option value="">{% trans "Tous les états" %}</option>
+    {% for value, label in statuses %}
+      <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Modifications remontées du terrain" %}</h2>
+    <p class="text-muted mb-0">
+      {% trans "Chaque ligne est une modification faite dans QField et renvoyée ici. Les deux cents dernières." %}
+    </p>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "État" %}</th>
+          <th scope="col">{% trans "Reçue le" %}</th>
+          <th scope="col">{% trans "Dernière tentative" %}</th>
+          <th scope="col">{% trans "Par" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for delta in deltas %}
+          <tr>
+            <td><span class="qfc-status qfc-status-{{ delta.last_status }}">{{ delta.get_last_status_display }}</span></td>
+            <td class="text-nowrap">{{ delta.created_at|date:"d/m/Y H:i" }}</td>
+            <td class="text-nowrap">{{ delta.last_apply_attempt_at|date:"d/m/Y H:i"|default:"—" }}</td>
+            <td>{{ delta.created_by.username|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="qfc-empty text-muted">
+              {% if status %}
+                {% trans "Aucune modification dans cet état." %}
+              {% else %}
+                {% trans "Aucune modification remontée pour l'instant." %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock project_content %}

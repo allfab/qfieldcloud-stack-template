@@ -1,0 +1,59 @@
+{% extends 'portal/base.html' %}
+{% load i18n %}
+
+{% block title_contents %}{{ project.owner.username }}/{{ project.name }}{% endblock %}
+
+{% block content %}
+<header class="qfc-project-header">
+  <div class="qfc-project-heading">
+    <p class="qfc-breadcrumb mb-1">
+      <a href="{% url 'portal_user_profile' project.owner.username %}">{{ project.owner.username }}</a> /
+    </p>
+    <h1 class="qfc-page-title mb-0">{{ project.name }}</h1>
+    {% if project.description %}
+      <p class="text-muted mb-0 mt-1">{{ project.description }}</p>
+    {% endif %}
+  </div>
+
+  <div class="qfc-project-meta">
+    {% if project.is_public %}
+      <span class="qfc-badge-visibility qfc-badge-public">{% trans "public" %}</span>
+    {% else %}
+      <span class="qfc-badge-visibility">{% trans "privé" %}</span>
+    {% endif %}
+
+    {% if project.status == 'ok' %}
+      <span class="qfc-status qfc-status-ok">{% trans "Synchronisé" %}</span>
+    {% elif project.status == 'busy' %}
+      <span class="qfc-status qfc-status-busy">{% trans "En cours" %}</span>
+    {% else %}
+      <span class="qfc-status qfc-status-failed">{% trans "En échec" %}</span>
+    {% endif %}
+
+    <span class="text-muted">{{ project.user_role }}</span>
+  </div>
+</header>
+
+<nav class="qfc-tabs">
+  <a class="qfc-tab {% if project_tab == 'overview' %}active{% endif %}"
+     href="{% url 'portal_project' project.owner.username project.name %}">{% trans "Aperçu" %}</a>
+  {% if can_read_files %}
+    <a class="qfc-tab {% if project_tab == 'files' %}active{% endif %}"
+       href="{% url 'portal_project_files' project.owner.username project.name %}">{% trans "Fichiers" %}</a>
+  {% endif %}
+  {% if can_list_jobs %}
+    <a class="qfc-tab {% if project_tab == 'jobs' %}active{% endif %}"
+       href="{% url 'portal_project_jobs' project.owner.username project.name %}">{% trans "Traitements" %}</a>
+  {% endif %}
+  {% if can_read_deltas %}
+    <a class="qfc-tab {% if project_tab == 'deltas' %}active{% endif %}"
+       href="{% url 'portal_project_deltas' project.owner.username project.name %}">{% trans "Modifications" %}</a>
+  {% endif %}
+  {% if can_read_collaborators %}
+    <a class="qfc-tab {% if project_tab == 'collaborators' %}active{% endif %}"
+       href="{% url 'portal_project_collaborators' project.owner.username project.name %}">{% trans "Collaborateurs" %}</a>
+  {% endif %}
+</nav>
+
+{% block project_content %}{% endblock project_content %}
+{% endblock content %}

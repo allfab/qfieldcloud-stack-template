@@ -12,19 +12,36 @@ from allauth.account.models import EmailAddress
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import PasswordChangeView
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.http import Http404, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView, UpdateView, View
 
 from qfieldcloud.authentication.models import AuthToken
-from qfieldcloud.core.models import Organization, Person, ProjectCollaborator
+from qfieldcloud.core import permissions_utils as perms
+from qfieldcloud.core.models import (
+    Delta,
+    Organization,
+    Person,
+    ProjectCollaborator,
+)
 from qfieldcloud.core.serializers import get_avatar_url
-from qfieldcloud.portal.forms import AccountForm, NotificationsForm, ProfileForm
-from qfieldcloud.project.enums import ProjectRoleOrigins
+from qfieldcloud.portal.forms import (
+    AccountForm,
+    AddCollaboratorForm,
+    CollaboratorRoleForm,
+    NotificationsForm,
+    ProfileForm,
+)
+from qfieldcloud.project.enums import ProjectCollaboratorRole, ProjectRoleOrigins
 from qfieldcloud.project.models import Project
+from qfieldcloud.project.utils.projects_utils import (
+    create_collaborator_by_username_or_email,
+)
 
 # Les tris proposés par l'en-tête du tableau. Une allowlist, pas un
 # `order_by(request.GET[...])` : le paramètre vient du navigateur.
@@ -105,10 +122,6 @@ class ProjectListMixin:
             "query": query,
             "visibility": visibility,
             "sort": sort,
-            # Le nom d'un projet ne devient un lien que s'il mène quelque part.
-            # Tant que le détail projet n'existe pas (lot suivant), seul un
-            # membre du staff a une destination : l'admin.
-            "can_open_project": self.request.user.is_staff,
         }
 
 
@@ -388,3 +401,309 @@ class RevokeTokensView(LoginRequiredMixin, AccountSidebarMixin, View):
                 kwargs={"username": request.user.username},
             )
         )
+
+
+# ---------------------------------------------------------------------------
+# Détail d'un projet
+# ---------------------------------------------------------------------------
+
+
+class ProjectMixin(LoginRequiredMixin):
+    """Le projet, et le droit de voir l'onglet demandé.
+
+    Deux contrôles distincts, dans cet ordre. `for_user(skip_invalid=True)`
+    dit si le projet EXISTE pour ce compte — sinon 404, sans confirmer qu'il
+    existe pour quelqu'un d'autre. Puis `permission_check` dit si cet onglet-là
+    lui est ouvert — sinon 403, puisque l'existence est déjà connue.
+
+    Aucune de ces deux règles n'est écrite ici : ce sont celles de
+    `core/permissions_utils.py`, que l'API applique de son côté.
+    """
+
+    #: La fonction de `permissions_utils` qui garde cet onglet.
+    permission_check = staticmethod(perms.can_retrieve_project)
+
+    #: L'onglet actif, pour le surligner dans la barre du projet.
+    project_tab = "overview"
+
+    def get_project(self) -> Project:
+        if not hasattr(self, "_project"):
+            self._project = get_object_or_404(
+                Project.objects.with_prefetch().for_user(
+                    self.request.user, skip_invalid=True
+                ),
+                owner__username=self.kwargs["username"],
+                name=self.kwargs["project_name"],
+            )
+
+        return self._project
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+
+        if not self.permission_check(request.user, self.get_project()):
+            raise PermissionDenied
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.get_project()
+        user = self.request.user
+
+        context.update(
+            {
+                "project": project,
+                "project_tab": self.project_tab,
+                "nav_section": "projects",
+                # Les onglets se dessinent d'après les mêmes fonctions que les
+                # gardes : un onglet affiché est un onglet accessible.
+                "can_read_files": perms.can_read_files(user, project),
+                "can_list_jobs": perms.can_list_jobs(user, project),
+                "can_read_deltas": perms.can_read_deltas(user, project),
+                "can_read_collaborators": perms.can_read_collaborators(user, project),
+            }
+        )
+        return context
+
+
+class ProjectOverviewView(ProjectMixin, TemplateView):
+    """Ce que le projet est : son fichier QGIS, ses couches, son état."""
+
+    template_name = "portal/project_overview.html"
+    project_tab = "overview"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.get_project()
+
+        context.update(
+            {
+                "qgis_project": getattr(project, "qgis_project", None),
+                # Les cinq derniers jobs suffisent à dire si ça tourne rond ;
+                # l'onglet Traitements porte l'historique complet.
+                "recent_jobs": project.jobs.order_by("-created_at")[:5],
+                "collaborators_count": project.direct_collaborators.count(),
+            }
+        )
+        return context
+
+
+class ProjectFilesView(ProjectMixin, TemplateView):
+    """Les fichiers du projet.
+
+    Le téléchargement ne passe pas par une vue à nous : le lien pointe sur
+    `filestorage_crud_file`, l'endpoint de l'API. Il accepte la session Django
+    (`SessionAuthentication` est dans `DEFAULT_AUTHENTICATION_CLASSES`),
+    revérifie `can_read_files`, et sert le fichier par X-Accel-Redirect.
+    """
+
+    template_name = "portal/project_files.html"
+    project_tab = "files"
+    permission_check = staticmethod(perms.can_read_files)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["files"] = (
+            self.get_project()
+            .project_files.select_related("latest_version", "uploaded_by")
+            .order_by("name")
+        )
+        return context
+
+
+class ProjectJobsView(ProjectMixin, TemplateView):
+    """L'historique des traitements : packaging, deltas, lecture du .qgs."""
+
+    template_name = "portal/project_jobs.html"
+    project_tab = "jobs"
+    permission_check = staticmethod(perms.can_list_jobs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["jobs"] = (
+            self.get_project()
+            .jobs.select_related("created_by")
+            .order_by("-created_at")[:100]
+        )
+        return context
+
+
+class ProjectDeltasView(ProjectMixin, TemplateView):
+    """Les modifications remontées du terrain, et ce qu'elles sont devenues."""
+
+    template_name = "portal/project_deltas.html"
+    project_tab = "deltas"
+    permission_check = staticmethod(perms.can_read_deltas)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        deltas = self.get_project().deltas.select_related("created_by")
+
+        status = self.request.GET.get("status", "")
+        if status in Delta.Status.values:
+            deltas = deltas.filter(last_status=status)
+
+        context.update(
+            {
+                "deltas": deltas.order_by("-created_at")[:200],
+                "status": status,
+                "statuses": Delta.Status.choices,
+            }
+        )
+        return context
+
+
+class ProjectCollaboratorsView(ProjectMixin, TemplateView):
+    """Qui travaille sur le projet, et à quel titre.
+
+    L'ajout passe par `projects_utils.create_collaborator_by_username_or_email`,
+    écrit par l'upstream pour exactement cet usage et appelé nulle part dans le
+    dépôt open source. Il porte les règles qu'un formulaire n'a pas à
+    réécrire — plafond du plan, appartenance à l'organisation, invitation d'un
+    inconnu par e-mail — et rend un message déjà traduit.
+    """
+
+    template_name = "portal/project_collaborators.html"
+    project_tab = "collaborators"
+    permission_check = staticmethod(perms.can_read_collaborators)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.get_project()
+        user = self.request.user
+
+        context.update(
+            {
+                "collaborators": project.collaborators.select_related(
+                    "collaborator"
+                ).order_by("collaborator__username"),
+                "add_form": kwargs.get("add_form") or AddCollaboratorForm(),
+                "roles": ProjectCollaboratorRole.choices,
+                "can_create_collaborators": perms.can_create_collaborators(
+                    user, project
+                ),
+                "can_update_collaborators": perms.can_update_collaborators(
+                    user, project
+                ),
+                "can_delete_collaborators": perms.can_delete_collaborators(
+                    user, project
+                ),
+            }
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        project = self.get_project()
+        action = request.POST.get("action", "add")
+
+        if action == "add":
+            return self.add_collaborator(request, project)
+        if action == "update":
+            return self.update_collaborator(request, project)
+        if action == "remove":
+            return self.remove_collaborator(request, project)
+
+        raise PermissionDenied
+
+    def add_collaborator(self, request, project):
+        if not perms.can_create_collaborators(request.user, project):
+            raise PermissionDenied
+
+        form = AddCollaboratorForm(request.POST)
+        if not form.is_valid():
+            return self.render_to_response(self.get_context_data(add_form=form))
+
+        success, message = create_collaborator_by_username_or_email(
+            project, form.cleaned_data["username"], request.user
+        )
+        # Le message vient de l'upstream et dit précisément ce qui a bloqué :
+        # on le rend tel quel plutôt que de le remplacer par un « échec ».
+        if success:
+            messages.success(request, message)
+        else:
+            messages.error(request, message)
+
+        return HttpResponseRedirect(self.get_tab_url(project))
+
+    def update_collaborator(self, request, project):
+        if not perms.can_update_collaborators(request.user, project):
+            raise PermissionDenied
+
+        collaborator = get_object_or_404(
+            ProjectCollaborator,
+            project=project,
+            collaborator__username=request.POST.get("username", ""),
+        )
+        form = CollaboratorRoleForm(request.POST, instance=collaborator)
+        if form.is_valid():
+            form.instance.updated_by = request.user
+            form.save()
+            messages.success(
+                request,
+                _('Le rôle de « %(username)s » a été changé.')
+                % {"username": collaborator.collaborator.username},
+            )
+        else:
+            messages.error(request, _("Ce rôle n'existe pas."))
+
+        return HttpResponseRedirect(self.get_tab_url(project))
+
+    def remove_collaborator(self, request, project):
+        if not perms.can_delete_collaborators(request.user, project):
+            raise PermissionDenied
+
+        collaborator = get_object_or_404(
+            ProjectCollaborator,
+            project=project,
+            collaborator__username=request.POST.get("username", ""),
+        )
+        username = collaborator.collaborator.username
+        collaborator.delete()
+        messages.success(
+            request,
+            _('« %(username)s » ne collabore plus à ce projet.')
+            % {"username": username},
+        )
+
+        return HttpResponseRedirect(self.get_tab_url(project))
+
+    def get_tab_url(self, project) -> str:
+        return reverse(
+            "portal_project_collaborators",
+            kwargs={
+                "username": project.owner.username,
+                "project_name": project.name,
+            },
+        )
+
+
+class PlanView(LoginRequiredMixin, AccountSidebarMixin, TemplateView):
+    """« Mon plan » : ce qu'il donne, ce qu'il en reste, ce qu'il refuse.
+
+    Ce n'est pas la page de facturation de l'offre hébergée, et ce n'en est pas
+    un ersatz : sur une instance auto-hébergée il n'y a rien à facturer. Ce qui
+    manquait, c'est qu'un utilisateur dont le packaging échoue sur
+    `PlanInsufficientError` n'avait aucune page pour comprendre pourquoi.
+    """
+
+    template_name = "portal/settings_plan.html"
+    extra_context = {"settings_section": "plan"}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        account = self.request.user.useraccount
+        subscription = account.current_subscription
+
+        context.update(
+            {
+                "subscription": subscription,
+                "plan": subscription.plan,
+                "storage_used_bytes": account.storage_used_bytes,
+                "storage_total_bytes": subscription.active_storage_total_bytes,
+                "storage_used_ratio": account.storage_used_ratio * 100,
+                "projects_count": self.request.user.projects.count(),
+            }
+        )
+        return context

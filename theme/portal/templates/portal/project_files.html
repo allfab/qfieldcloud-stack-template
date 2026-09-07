@@ -1,0 +1,50 @@
+{% extends 'portal/project_base.html' %}
+{% load i18n %}
+
+{% block project_content %}
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Fichiers du projet" %}</h2>
+    <p class="text-muted mb-0">
+      {% trans "Les fichiers poussés depuis QGIS. Le téléchargement passe par l'API, qui revérifie vos droits." %}
+    </p>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Nom" %}</th>
+          <th scope="col" class="text-right">{% trans "Taille" %}</th>
+          <th scope="col" class="text-center">{% trans "Versions" %}</th>
+          <th scope="col">{% trans "Dernier envoi" %}</th>
+          <th scope="col">{% trans "Par" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in files %}
+          <tr>
+            <td>
+              {% comment %}
+                Le lien vise `filestorage_crud_file`, l'endpoint de l'API. Il
+                accepte la session Django, revérifie `can_read_files` et sert
+                le fichier par X-Accel-Redirect. Rien à écrire de notre côté.
+              {% endcomment %}
+              <a href="{% url 'filestorage_crud_file' project.id file.name %}">{{ file.name }}</a>
+            </td>
+            <td class="text-right text-nowrap">{{ file.latest_version.size|filesizeformat }}</td>
+            <td class="text-center">{{ file.latest_version_count }}</td>
+            <td class="text-nowrap">{{ file.uploaded_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ file.uploaded_by.username|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="qfc-empty text-muted">
+              {% trans "Aucun fichier. Poussez le projet depuis QGIS avec QFieldSync." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock project_content %}

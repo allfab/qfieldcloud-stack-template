@@ -1,0 +1,78 @@
+{% extends 'portal/settings_base.html' %}
+{% load i18n %}
+
+{% block title_contents %}{% trans "Mon plan" %}{% endblock %}
+
+{% block settings_content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Mon plan" %}</h2>
+    <dl class="qfc-facts">
+      <dt>{% trans "Plan" %}</dt><dd>{{ plan.display_name|default:plan.code }}</dd>
+      <dt>{% trans "Statut" %}</dt><dd>{{ subscription.get_status_display }}</dd>
+      <dt>{% trans "Actif depuis" %}</dt><dd>{{ subscription.active_since|date:"d/m/Y"|default:"—" }}</dd>
+      <dt>{% trans "Actif jusqu'au" %}</dt><dd>{{ subscription.active_until|date:"d/m/Y"|default:"—" }}</dd>
+      <dt>{% trans "Projets" %}</dt><dd>{{ projects_count }}</dd>
+    </dl>
+    <p class="text-muted mb-0">
+      {% trans "Cette instance est auto-hébergée : rien n'est facturé. Le plan ne sert qu'à porter des quotas, et c'est l'exploitant de l'instance qui les fixe." %}
+    </p>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Stockage" %}</h2>
+    <div class="progress qfc-storage-bar">
+      <div class="progress-bar" role="progressbar" style="width: {{ storage_used_ratio|floatformat:0 }}%"
+           aria-valuenow="{{ storage_used_ratio|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <p class="text-muted mb-0 mt-2">
+      {% blocktrans with used=storage_used_bytes|filesizeformat total=storage_total_bytes|filesizeformat %}{{ used }} sur {{ total }}{% endblocktrans %}
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Ce que ce plan autorise" %}</h2>
+    <dl class="qfc-facts">
+      <dt>{% trans "Versions gardées par fichier" %}</dt>
+      <dd>{{ plan.storage_keep_versions }}</dd>
+
+      <dt>{% trans "Minutes de traitement" %}</dt>
+      <dd>{{ plan.job_minutes }}</dd>
+
+      <dt>{% trans "Bases de données externes" %}</dt>
+      <dd>
+        {% if plan.is_external_db_supported %}
+          <span class="qfc-status qfc-status-ok">{% trans "Autorisées" %}</span>
+        {% else %}
+          <span class="qfc-status qfc-status-failed">{% trans "Refusées" %}</span>
+        {% endif %}
+      </dd>
+
+      <dt>{% trans "Collaborateurs sur un projet privé" %}</dt>
+      <dd>
+        {% if not plan.is_premium %}
+          <span class="qfc-status qfc-status-failed">{% trans "Aucun" %}</span>
+        {% elif plan.max_premium_collaborators_per_private_project < 0 %}
+          {% trans "Sans limite" %}
+        {% else %}
+          {{ plan.max_premium_collaborators_per_private_project }}
+        {% endif %}
+      </dd>
+    </dl>
+
+    {% if not plan.is_external_db_supported %}
+      {% comment %}
+        C'est le seul quota qui mord vraiment sur une instance neuve, et il se
+        manifeste par un job en échec sans explication. Autant l'écrire ici.
+      {% endcomment %}
+      <div class="alert alert-info mb-0">
+        {% trans "Un projet QGIS branché sur PostGIS ou sur un WFS sera refusé au packaging avec ce plan. Un projet en GeoPackage passe sans rien demander." %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock settings_content %}

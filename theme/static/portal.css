@@ -371,3 +371,183 @@ html {
     background-color: #4a6fae;
   }
 }
+
+/* --- En-tête et onglets d'un projet ------------------------------------- */
+
+.qfc-project-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.qfc-project-heading {
+  min-width: 0;
+}
+
+.qfc-breadcrumb {
+  color: var(--qfc-muted);
+  font-size: 0.92rem;
+}
+
+.qfc-project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Les onglets sont des liens vers de vraies URL, pas des panneaux masqués :
+ * chaque onglet est partageable, et le bouton « Précédent » y revient. */
+.qfc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--qfc-line);
+  margin-bottom: 1.5rem;
+}
+
+.qfc-tab {
+  color: var(--qfc-muted);
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+
+.qfc-tab:hover {
+  color: var(--qfc-blue);
+  text-decoration: none;
+}
+
+.qfc-tab.active {
+  color: var(--qfc-blue-deep);
+  border-bottom-color: var(--qfc-green);
+}
+
+/* --- Listes de faits ---------------------------------------------------- */
+
+/* Deux colonnes, l'étiquette à gauche : plus lisible qu'un tableau pour une
+ * poignée de valeurs, et ça se replie tout seul sur mobile. */
+.qfc-facts {
+  display: grid;
+  grid-template-columns: minmax(9rem, auto) 1fr;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0;
+}
+
+.qfc-facts dt {
+  color: var(--qfc-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.qfc-facts dd {
+  margin-bottom: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 400px) {
+  .qfc-facts {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .qfc-facts dd {
+    margin-bottom: 0.6rem;
+  }
+}
+
+/* --- Sortie d'un traitement --------------------------------------------- */
+
+.qfc-job-output-row td {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.qfc-job-output-row summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.qfc-job-output {
+  max-height: 22rem;
+  overflow: auto;
+  margin: 0.6rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: var(--qfc-ground);
+  border: 1px solid var(--qfc-line);
+  color: var(--qfc-ink);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* --- Formulaires en ligne dans un tableau ------------------------------- */
+
+/* Un `<form>` par ligne — une seule action part à la fois, sans JavaScript
+ * pour départager. `margin: 0` évite qu'il pousse la hauteur de la cellule. */
+.qfc-inline-form {
+  margin: 0;
+}
+
+.qfc-inline-form .form-control-sm {
+  min-width: 8.5rem;
+}
+
+/* Le champ d'ajout prend la place restante, le bouton garde la sienne. */
+.qfc-toolbar-grow {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+/* bootstrap_form ajoute une marge sous chaque champ : dans une barre d'outils
+ * en flex, elle décale le bouton d'une demi-ligne vers le haut. */
+.qfc-toolbar-grow .form-group {
+  margin-bottom: 0;
+}
+
+/* --- États des traitements et des modifications -------------------------- */
+
+/* Les statuts de Job et de Delta sont plus nombreux que les trois d'un projet.
+ * Trois familles suffisent à les lire : ce qui va, ce qui tourne, ce qui a
+ * échoué — le mot porte le détail, la couleur porte le ton. */
+.qfc-status-finished,
+.qfc-status-applied {
+  color: var(--qfc-green-solid);
+}
+
+.qfc-status-pending,
+.qfc-status-queued,
+.qfc-status-started {
+  color: var(--qfc-blue);
+}
+
+.qfc-status-stopped,
+.qfc-status-ignored,
+.qfc-status-not_applied,
+.qfc-status-unpermitted {
+  color: var(--qfc-muted);
+}
+
+.qfc-status-conflict,
+.qfc-status-error {
+  color: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qfc-status-finished,
+  .qfc-status-applied {
+    color: #9ada4c;
+  }
+
+  .qfc-status-conflict,
+  .qfc-status-error {
+    color: #f2857c;
+  }
+}

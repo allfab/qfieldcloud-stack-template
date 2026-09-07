@@ -381,6 +381,11 @@ dehors** comme le thème : une application Django dans `theme/portal/`, une
 URLconf dans `theme/urls_custom.py`, trois lignes dans `theme/settings_custom.py`
 et deux montages par service. `git -C src status` reste vide.
 
+Deux routes de l'upstream sont reprises, pas seulement complétées : `index`
+(la redirection vers l'admin) et `a/<user>/<projet>/` (qui redirigeait elle
+aussi vers l'admin, donc vers une page interdite pour un non-staff). C'est
+tout ; le reste des `urlpatterns` est repris tel quel.
+
 Ce qui est en place :
 
 | Page | Chemin | Ce qu'elle fait |
@@ -392,26 +397,39 @@ Ce qui est en place :
 | Profil | `/settings/<user>/profile/` | Avatar, biographie, organisme, localisation, fuseau horaire |
 | Notifications | `/settings/<user>/notifications/` | Fréquence des courriels |
 | Sécurité | `/settings/<user>/security/` | Mot de passe, jetons des clients, déconnexion globale |
+| Mon plan | `/settings/<user>/plan/` | Quotas du plan, stockage consommé, et ce que le plan refuse |
+| Projet — aperçu | `/a/<user>/<projet>/` | Fichier QGIS, couches et leurs erreurs, chiffres, derniers traitements |
+| Projet — fichiers | `/a/<user>/<projet>/files/` | Fichiers, tailles, versions, téléchargement |
+| Projet — traitements | `/a/<user>/<projet>/jobs/` | Historique des jobs, avec leur sortie repliée |
+| Projet — modifications | `/a/<user>/<projet>/deltas/` | Ce qui est remonté du terrain, filtrable par état |
+| Projet — collaborateurs | `/a/<user>/<projet>/collaborators/` | Ajout, rôle, retrait |
 
 Ce qui n'y est pas, et pourquoi :
 
-- **Le détail d'un projet** — fichiers, jobs, deltas, carte. C'est le gros
-  morceau, et il mérite d'être dessiné pour l'usage d'une instance plutôt que
-  recopié. Tant qu'il manque, le nom d'un projet n'est un lien que pour un
-  membre du staff, vers l'admin : un lien qui renvoie tout le monde vers une
-  page interdite serait pire que pas de lien.
-- **Créer un projet, une organisation, inviter** — les modèles sont là, les
-  écrans de rôles restent à écrire.
-- **La facturation** — les plans et les quotas existent en base et le portail
-  affiche le stockage consommé, mais il n'y a ni Stripe, ni carte, ni facture
-  dans le dépôt open source. Sur une instance auto-hébergée, il n'y a rien à
-  facturer.
+- **La carte d'un projet** — l'emprise et les couches sont en base
+  (`QgisProject.extent`, `QgisLayer`), mais afficher une carte demande un fond
+  et une bibliothèque, donc un choix qui engage. Les couches sont listées, avec
+  le message d'erreur de celles qui sont invalides — c'est ce qui explique un
+  packaging en échec.
+- **Créer un projet, une organisation** — les modèles sont là, les écrans
+  restent à écrire. Un projet se crée depuis QGIS avec QFieldSync ; une
+  organisation, depuis l'admin.
+- **Les invitations** — l'écran existe côté upstream (`remaining_invitations`,
+  `invitations_utils`), mais il n'a de sens qu'avec des inscriptions ouvertes.
+  Tant que `QFIELDCLOUD_ACCOUNT_ADAPTER` vaut `AccountAdapterSignUpClosed`, il
+  enverrait des gens vers une porte fermée. Ajouter un collaborateur par
+  adresse e-mail déclenche quand même l'invitation upstream, si vous ouvrez.
+- **La facturation** — sans objet ici. `stripe` est bien dans
+  `requirements.in`, mais **aucun fichier de `qfieldcloud/` ne l'importe** :
+  l'intégration de paiement n'est pas dans l'open source. Ce qui reste — les
+  plans, les quotas, le stockage consommé — est présenté par « Mon plan », qui
+  prend la place de la page de facturation sans en prendre le titre.
 - **Changer de nom d'utilisateur** — il est dans l'adresse de chacun de ses
   projets, et l'upstream ne prévoit aucune redirection après un renommage.
 - **Supprimer son compte** — sur une instance auto-hébergée, c'est une décision
   d'exploitant. L'admin le fait.
 
-Deux points de conception valent d'être connus.
+Quatre points de conception valent d'être connus.
 
 **L'adresse e-mail ne s'écrit pas directement.** Le formulaire de compte confie
 le changement à allauth (`EmailAddress.objects.add_new_email`) : un lien part à
@@ -424,6 +442,27 @@ Les jetons sont référencés ailleurs — journaux, statistiques d'usage ; les
 effacer creuserait des trous dans l'historique. Les connexions par navigateur
 passent par la session Django et non par un jeton : elles ne sont pas listées,
 et la déconnexion globale ne les touche pas.
+
+**Aucune règle d'accès n'est réécrite.** Chaque onglet d'un projet est gardé
+par la fonction de `core/permissions_utils.py` que l'API applique de son côté —
+`can_read_files`, `can_list_jobs`, `can_read_deltas`, `can_read_collaborators`.
+Les mêmes fonctions décident si l'onglet s'affiche : un onglet visible est un
+onglet accessible. Le projet lui-même passe par
+`Project.objects.for_user(skip_invalid=True)` : un projet hors de portée rend
+404, pas 403, pour ne pas confirmer son existence. Le téléchargement d'un
+fichier ne passe par aucune vue à nous — le lien vise l'endpoint de l'API, qui
+accepte la session Django et revérifie tout.
+
+**L'ajout d'un collaborateur passe par l'upstream, y compris pour ses refus.**
+`project/utils/projects_utils.py` porte `create_collaborator_by_username_or_email`,
+écrit pour exactement cet usage et **appelé nulle part** dans le dépôt open
+source — un reste du frontal fermé. Il applique le plafond du plan,
+l'appartenance à l'organisation, le cas du doublon, et l'invitation par e-mail
+d'un inconnu ; il rend un message déjà traduit, que le portail affiche tel
+quel. Conséquence à connaître : `check_can_become_collaborator` **refuse tout
+collaborateur sur un projet privé** si le plan du propriétaire n'est pas
+premium — ce qui est le cas de `community` et de `organization` sur une
+instance neuve. Le portail le dit avant l'échec, sur la page elle-même.
 
 Un mot pour qui édite ces gabarits. `DEBUG=0` active le loader de gabarits en
 cache : un fichier modifié dans `theme/portal/templates/` n'est **pas** relu, le

@@ -1,0 +1,97 @@
+{% extends 'portal/project_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block project_content %}
+{% if can_create_collaborators %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Ajouter un collaborateur" %}</h2>
+
+    <form method="post" class="qfc-toolbar">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      <div class="qfc-toolbar-grow">{% bootstrap_field add_form.username show_label=False %}</div>
+      <button type="submit" class="btn btn-primary">{% trans "Ajouter" %}</button>
+    </form>
+
+    <p class="text-muted mb-0">
+      {% trans "Un nom d'utilisateur existant l'ajoute directement. Une adresse e-mail inconnue envoie une invitation, si les inscriptions sont ouvertes." %}
+    </p>
+
+    {% if not project.is_public and not project.owner.useraccount.current_subscription.plan.is_premium %}
+      {% comment %}
+        Le dire AVANT l'échec. `check_can_become_collaborator` refuse tout
+        collaborateur sur un projet privé quand le plan du propriétaire n'est
+        pas premium — ce qui est le cas du plan `community` par défaut.
+      {% endcomment %}
+      <div class="alert alert-info mt-3 mb-0">
+        {% trans "Ce projet est privé et le plan de son propriétaire n'est pas premium : l'ajout sera refusé. Rendez le projet public, ou faites relever le plan par l'exploitant de l'instance." %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Collaborateurs" %}</h2>
+    <p class="text-muted mb-0">
+      {% blocktrans with owner=project.owner.username %}{{ owner }}, propriétaire du projet, en est administrateur d'office et n'apparaît pas dans cette liste.{% endblocktrans %}
+    </p>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Utilisateur" %}</th>
+          <th scope="col">{% trans "Rôle" %}</th>
+          <th scope="col">{% trans "Depuis" %}</th>
+          <th scope="col" class="text-right">{% trans "Actions" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for collaborator in collaborators %}
+          <tr>
+            <td>
+              {{ collaborator.collaborator.username }}
+              {% if collaborator.is_incognito %}
+                <span class="qfc-badge-visibility">{% trans "incognito" %}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if can_update_collaborators %}
+                <form method="post" class="qfc-inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update">
+                  <input type="hidden" name="username" value="{{ collaborator.collaborator.username }}">
+                  <select name="role" class="form-control form-control-sm" onchange="this.form.submit()"
+                          aria-label="{% trans 'Rôle' %}">
+                    {% for value, label in roles %}
+                      <option value="{{ value }}" {% if collaborator.role == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+              {% else %}
+                {{ collaborator.get_role_display }}
+              {% endif %}
+            </td>
+            <td class="text-nowrap">{{ collaborator.created_at|date:"d/m/Y" }}</td>
+            <td class="text-right">
+              {% if can_delete_collaborators %}
+                <form method="post" class="qfc-inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove">
+                  <input type="hidden" name="username" value="{{ collaborator.collaborator.username }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Retirer" %}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="qfc-empty text-muted">{% trans "Personne d'autre que le propriétaire." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock project_content %}

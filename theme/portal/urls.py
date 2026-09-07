@@ -47,4 +47,38 @@ urlpatterns = [
         views.RevokeTokensView.as_view(),
         name="portal_revoke_tokens",
     ),
+    path(
+        "settings/<str:username>/plan/",
+        views.PlanView.as_view(),
+        name="portal_settings_plan",
+    ),
+    # Le détail d'un projet. Attention : ce chemin OMBRE une route de
+    # l'upstream, `a/<username>/<project_name>/`, qui redirigeait vers l'admin
+    # — donc vers une page interdite pour un non-staff. C'est le seul endroit,
+    # avec `index`, où le portail prend la place d'une route existante.
+    path(
+        "a/<str:username>/<str:project_name>/",
+        views.ProjectOverviewView.as_view(),
+        name="portal_project",
+    ),
+    path(
+        "a/<str:username>/<str:project_name>/files/",
+        views.ProjectFilesView.as_view(),
+        name="portal_project_files",
+    ),
+    path(
+        "a/<str:username>/<str:project_name>/jobs/",
+        views.ProjectJobsView.as_view(),
+        name="portal_project_jobs",
+    ),
+    path(
+        "a/<str:username>/<str:project_name>/deltas/",
+        views.ProjectDeltasView.as_view(),
+        name="portal_project_deltas",
+    ),
+    path(
+        "a/<str:username>/<str:project_name>/collaborators/",
+        views.ProjectCollaboratorsView.as_view(),
+        name="portal_project_collaborators",
+    ),
 ]

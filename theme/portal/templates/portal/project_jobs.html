@@ -1,0 +1,52 @@
+{% extends 'portal/project_base.html' %}
+{% load i18n %}
+
+{% block project_content %}
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Traitements" %}</h2>
+    <p class="text-muted mb-0">{% trans "Les cent derniers, du plus récent au plus ancien." %}</p>
+  </div>
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Type" %}</th>
+          <th scope="col">{% trans "État" %}</th>
+          <th scope="col">{% trans "Lancé le" %}</th>
+          <th scope="col">{% trans "Terminé le" %}</th>
+          <th scope="col">{% trans "Par" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+          <tr>
+            <td>{{ job.get_type_display }}</td>
+            <td><span class="qfc-status qfc-status-{{ job.status }}">{{ job.get_status_display }}</span></td>
+            <td class="text-nowrap">{{ job.created_at|date:"d/m/Y H:i" }}</td>
+            <td class="text-nowrap">{{ job.finished_at|date:"d/m/Y H:i"|default:"—" }}</td>
+            <td>{{ job.created_by.username|default:"—" }}</td>
+          </tr>
+          {% if job.output %}
+            <tr class="qfc-job-output-row">
+              <td colspan="5">
+                {% comment %}
+                  La sortie d'un job de packaging fait des milliers de lignes :
+                  repliée par défaut, elle reste consultable sans noyer la
+                  liste. `<details>` fait ça sans une ligne de JavaScript.
+                {% endcomment %}
+                <details>
+                  <summary class="text-muted">{% trans "Sortie du traitement" %}</summary>
+                  <pre class="qfc-job-output">{{ job.output }}</pre>
+                </details>
+              </td>
+            </tr>
+          {% endif %}
+        {% empty %}
+          <tr><td colspan="5" class="qfc-empty text-muted">{% trans "Aucun traitement." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock project_content %}

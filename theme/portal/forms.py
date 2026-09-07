@@ -9,7 +9,7 @@ changer lui-même.
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from qfieldcloud.core.models import Person, UserAccount
+from qfieldcloud.core.models import Person, ProjectCollaborator, UserAccount
 
 
 class AccountForm(forms.ModelForm):
@@ -82,3 +82,31 @@ class NotificationsForm(forms.ModelForm):
         labels = {
             "notifs_frequency": _("Fréquence des courriels de notification"),
         }
+
+
+class AddCollaboratorForm(forms.Form):
+    """Ajout d'un collaborateur, par nom d'utilisateur ou par adresse e-mail.
+
+    Le formulaire ne valide rien de métier : tout est délégué à
+    `projects_utils.create_collaborator_by_username_or_email`, qui applique les
+    règles de l'upstream (appartenance à l'organisation, plafond du plan,
+    utilisateur déjà collaborateur, invitation d'un inconnu par e-mail) et
+    renvoie un message prêt à afficher.
+    """
+
+    username = forms.CharField(
+        label=_("Nom d'utilisateur ou adresse e-mail"),
+        max_length=254,
+        widget=forms.TextInput(
+            attrs={"placeholder": _("nom-utilisateur ou adresse@exemple.org")}
+        ),
+    )
+
+
+class CollaboratorRoleForm(forms.ModelForm):
+    """Changement de rôle d'un collaborateur déjà en place."""
+
+    class Meta:
+        model = ProjectCollaborator
+        fields = ("role",)
+        labels = {"role": _("Rôle")}
