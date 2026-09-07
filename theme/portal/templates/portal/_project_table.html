@@ -1,0 +1,95 @@
+{% load i18n %}
+
+{% comment %}
+  La barre de recherche et les filtres. Un GET, pas de JavaScript : la page
+  reste partageable par son URL, et le bouton « Précédent » fait ce qu'on
+  attend de lui.
+{% endcomment %}
+<form method="get" class="qfc-toolbar mb-3">
+  <div class="input-group">
+    <input type="search" name="q" class="form-control" value="{{ query }}"
+           placeholder="{% trans 'Rechercher un projet…' %}" aria-label="{% trans 'Rechercher' %}">
+    <div class="input-group-append">
+      <button class="btn btn-primary" type="submit">{% trans "Rechercher" %}</button>
+    </div>
+  </div>
+
+  <select name="visibility" class="form-control qfc-toolbar-select" onchange="this.form.submit()"
+          aria-label="{% trans 'Visibilité' %}">
+    <option value="">{% trans "Toutes visibilités" %}</option>
+    <option value="private" {% if visibility == 'private' %}selected{% endif %}>{% trans "Privés" %}</option>
+    <option value="public" {% if visibility == 'public' %}selected{% endif %}>{% trans "Publics" %}</option>
+  </select>
+
+  <select name="sort" class="form-control qfc-toolbar-select" onchange="this.form.submit()"
+          aria-label="{% trans 'Tri' %}">
+    <option value="-updated" {% if sort == '-updated' %}selected{% endif %}>{% trans "Modifiés récemment" %}</option>
+    <option value="updated" {% if sort == 'updated' %}selected{% endif %}>{% trans "Modifiés anciennement" %}</option>
+    <option value="name" {% if sort == 'name' %}selected{% endif %}>{% trans "Nom (A→Z)" %}</option>
+    <option value="-name" {% if sort == '-name' %}selected{% endif %}>{% trans "Nom (Z→A)" %}</option>
+    <option value="-storage" {% if sort == '-storage' %}selected{% endif %}>{% trans "Stockage décroissant" %}</option>
+    <option value="storage" {% if sort == 'storage' %}selected{% endif %}>{% trans "Stockage croissant" %}</option>
+  </select>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table qfc-project-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">{% trans "Nom" %}</th>
+          <th scope="col" class="text-right">{% trans "Stockage" %}</th>
+          <th scope="col" class="text-center">{% trans "Collaborateurs" %}</th>
+          <th scope="col">{% trans "État" %}</th>
+          <th scope="col">{% trans "Rôle" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+          <tr>
+            <td>
+              <div class="qfc-project-name">
+                {% if project.is_public %}
+                  <span class="qfc-badge-visibility qfc-badge-public" title="{% trans 'Projet public' %}">{% trans "public" %}</span>
+                {% else %}
+                  <span class="qfc-badge-visibility" title="{% trans 'Projet privé' %}">{% trans "privé" %}</span>
+                {% endif %}
+
+                {% if can_open_project %}
+                  <a href="/a/{{ project.owner.username }}/{{ project.name }}/">{{ project.owner.username }} / <strong>{{ project.name }}</strong></a>
+                {% else %}
+                  <span>{{ project.owner.username }} / <strong>{{ project.name }}</strong></span>
+                {% endif %}
+              </div>
+              {% if project.description %}
+                <div class="qfc-project-description text-muted">{{ project.description|truncatechars:120 }}</div>
+              {% endif %}
+            </td>
+            <td class="text-right text-nowrap">{{ project.file_storage_bytes|filesizeformat }}</td>
+            <td class="text-center">{{ project.collaborators_count|default:0 }}</td>
+            <td>
+              {% if project.status == 'ok' %}
+                <span class="qfc-status qfc-status-ok">{% trans "Synchronisé" %}</span>
+              {% elif project.status == 'busy' %}
+                <span class="qfc-status qfc-status-busy">{% trans "En cours" %}</span>
+              {% else %}
+                <span class="qfc-status qfc-status-failed" title="{{ project.status_code }}">{% trans "En échec" %}</span>
+              {% endif %}
+            </td>
+            <td class="text-nowrap">{{ project.user_role }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="qfc-empty text-muted">
+              {% if query or visibility %}
+                {% trans "Aucun projet ne correspond à cette recherche." %}
+              {% else %}
+                {% trans "Aucun projet pour l'instant. Les projets se créent depuis QGIS, avec QFieldSync." %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

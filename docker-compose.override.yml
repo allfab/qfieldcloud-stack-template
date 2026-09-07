@@ -45,10 +45,18 @@ services:
     # .env, jamais l'une sans les autres : le gabarit charge `custom/theme.css`
     # de lui-même, sans rien demander aux réglages Django, donc le laisser monté
     # garde la palette du thème. Voir « Revenir au thème de l'upstream », README.
+    #
+    # PORTAIL UTILISATEUR — les deux dernières lignes. L'upstream ne livre
+    # aucune page pour un compte non-staff ; `portal` est une application
+    # Django à nous, et `urls_custom.py` l'URLconf qui la met devant celle de
+    # l'upstream. Les deux vont ensemble, et avec l'INSTALLED_APPS et le
+    # ROOT_URLCONF de theme/settings_custom.py. Voir « Portail », README.
     volumes:
       - ../theme/settings_custom.py:/usr/src/app/qfieldcloud/settings_custom.py:ro
       - ../theme/static:/usr/src/app/qfieldcloud/core/staticfiles/custom:ro
       - ../theme/account-base.html:/usr/src/app/qfieldcloud/core/templates/account/base.html:ro
+      - ../theme/portal:/usr/src/app/qfieldcloud/portal:ro
+      - ../theme/urls_custom.py:/usr/src/app/qfieldcloud/urls_custom.py:ro
     # 9,8 Go d'origine, pour l'application la plus bavarde de la pile.
     logging: *logging-cap
 
@@ -172,8 +180,13 @@ services:
     # Même module de réglages que l'app : il lui faut donc le même fichier.
     # THÈME ACTIF, voir `app`. Se recommente avec lui, jamais tout seul :
     # sans ce fichier, le worker ne démarre pas sous `settings_custom`.
+    # Le portail ne lui sert à rien, mais son module de réglages déclare
+    # l'application et l'URLconf : sans ces deux montages, Django refuse de
+    # démarrer sur un `ModuleNotFoundError`.
     volumes:
       - ../theme/settings_custom.py:/usr/src/app/qfieldcloud/settings_custom.py:ro
+      - ../theme/portal:/usr/src/app/qfieldcloud/portal:ro
+      - ../theme/urls_custom.py:/usr/src/app/qfieldcloud/urls_custom.py:ro
     logging: *logging-cap
 
   # Les deux services à usage unique : ils tournent au démarrage puis sortent,

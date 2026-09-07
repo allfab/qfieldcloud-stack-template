@@ -20,6 +20,10 @@ coûte pas une ligne de `src/`. Il se retire en trois étapes, décrites à
 « Revenir au thème de l'upstream » ; le nom affiché, lui, est un placeholder à
 changer, `INSTANCE_NAME` dans `theme/settings_custom.py`.
 
+**Il est aussi livré avec un portail utilisateur**, que l'upstream n'a pas : sans
+lui, `/` renvoie à l'admin et un compte non-staff y boucle en redirections. Même
+principe, même prix — pas une ligne de `src/`. Voir « Portail utilisateur ».
+
 ## Ce que contient ce dépôt
 
 | Fichier | Rôle |
@@ -30,6 +34,7 @@ changer, `INSTANCE_NAME` dans `theme/settings_custom.py`.
 | `Makefile` | Raccourcis, pour ne plus se demander d'où lancer Compose ni où vivent les scripts |
 | `scripts/` | Sauvegarde du bucket et test de restauration. À appeler par le `Makefile` (`make backup`, `make restore-test`), pas directement |
 | `theme/` | Apparence de l'instance : logos, couleurs, textes. **Livré actif.** Chargé par `DJANGO_SETTINGS_MODULE`, sans rien modifier dans `src/`. Voir « Thème » |
+| `theme/portal/` | Portail utilisateur : les pages que l'upstream ne livre pas. Application Django montée dans l'image, mise devant l'URLconf upstream par `theme/urls_custom.py`. Voir « Portail utilisateur » |
 | `.gitignore` | Exclut `.env` — il contient vos secrets |
 
 ## Démarrage, d'un dossier vide à une instance qui répond
@@ -165,21 +170,24 @@ path("accounts/password/change/", blocked_view),
 
 Ce n'est pas un oubli, c'est une décision de l'upstream. Trois conséquences pratiques.
 
-**Un compte non-`is_staff` qui se connecte par le web boucle.** `LOGIN_REDIRECT_URL`
-vaut `index`, `index` redirige vers `QFIELDCLOUD_ADMIN_URI`, l'admin refuse le
-non-staff, allauth le voit connecté et le renvoie à `index` :
+**Un compte non-`is_staff` qui se connecte par le web boucle** — chez l'upstream.
+`LOGIN_REDIRECT_URL` vaut `index`, `index` redirige vers `QFIELDCLOUD_ADMIN_URI`,
+l'admin refuse le non-staff, allauth le voit connecté et le renvoie à `index` :
 
 ```
 / -> admin/ -> /admin/login/?next=/admin/ -> /accounts/login/?next=/admin/ -> /admin/ -> …
 ```
 
-Le navigateur affiche `ERR_TOO_MANY_REDIRECTS`. C'est le comportement de l'upstream,
-pas un défaut de configuration. Si vous ouvrez les inscriptions, sachez que c'est
-l'accueil réservé à qui vient de créer son compte.
+Le navigateur affiche `ERR_TOO_MANY_REDIRECTS`. **Ce template ne boucle pas** : le
+portail livré prend la place de cette redirection — voir « Portail utilisateur ». Le
+paragraphe reste ici parce que c'est ce que vous trouverez sur une instance montée
+sans lui, et parce que c'est ce qui explique la forme du correctif.
 
-**L'utilisateur n'a rien à faire sur le web.** L'API, elle, lui répond normalement
-(`/api/v1/auth/user/`, `/api/v1/projects/`) : il travaille depuis QField et QFieldSync
-avec ses identifiants. C'est de là qu'il pousse ses projets et synchronise.
+**L'utilisateur travaille depuis QField et QFieldSync.** Le portail lui donne ses
+projets, son profil et son mot de passe ; c'est l'API qui porte le reste
+(`/api/v1/auth/user/`, `/api/v1/projects/`), et c'est de là qu'il pousse ses projets
+et synchronise. Rien de ce que le portail affiche n'est une règle nouvelle : il lit
+les mêmes objets que l'API.
 
 **Les quotas sont des lignes en base, pas du code.** Le plan `community`, attribué
 d'office à l'inscription, vaut sur une instance neuve :
@@ -364,6 +372,92 @@ votre `.env`, lui, n'est pas dans le dépôt. Une instance qui reprend le templa
 sans toucher à rien démarre donc thémée, et une instance revenue à l'upstream le
 reste tant que son `.env` le dit — mais le prochain `git pull` ne le lui
 rappellera pas. C'est le fichier qui décide, pas le dépôt.
+
+## Portail utilisateur
+
+L'upstream ne livre aucune page pour un utilisateur ordinaire — voir « Ce que
+l'instance n'a pas ». Ce template en livre une poignée, montées **depuis le
+dehors** comme le thème : une application Django dans `theme/portal/`, une
+URLconf dans `theme/urls_custom.py`, trois lignes dans `theme/settings_custom.py`
+et deux montages par service. `git -C src status` reste vide.
+
+Ce qui est en place :
+
+| Page | Chemin | Ce qu'elle fait |
+|---|---|---|
+| Mes projets | `/` | Liste des projets visibles, avec recherche, filtre de visibilité et tri |
+| Profil | `/a/<user>/` | Le même tableau, restreint à un propriétaire ; avatar, biographie, organisations |
+| Projets publics | `/projects/public/` | Les projets ouverts à tous les comptes de l'instance |
+| Compte utilisateur | `/settings/<user>/` | Prénom, nom, adresse e-mail, comptes externes liés |
+| Profil | `/settings/<user>/profile/` | Avatar, biographie, organisme, localisation, fuseau horaire |
+| Notifications | `/settings/<user>/notifications/` | Fréquence des courriels |
+| Sécurité | `/settings/<user>/security/` | Mot de passe, jetons des clients, déconnexion globale |
+
+Ce qui n'y est pas, et pourquoi :
+
+- **Le détail d'un projet** — fichiers, jobs, deltas, carte. C'est le gros
+  morceau, et il mérite d'être dessiné pour l'usage d'une instance plutôt que
+  recopié. Tant qu'il manque, le nom d'un projet n'est un lien que pour un
+  membre du staff, vers l'admin : un lien qui renvoie tout le monde vers une
+  page interdite serait pire que pas de lien.
+- **Créer un projet, une organisation, inviter** — les modèles sont là, les
+  écrans de rôles restent à écrire.
+- **La facturation** — les plans et les quotas existent en base et le portail
+  affiche le stockage consommé, mais il n'y a ni Stripe, ni carte, ni facture
+  dans le dépôt open source. Sur une instance auto-hébergée, il n'y a rien à
+  facturer.
+- **Changer de nom d'utilisateur** — il est dans l'adresse de chacun de ses
+  projets, et l'upstream ne prévoit aucune redirection après un renommage.
+- **Supprimer son compte** — sur une instance auto-hébergée, c'est une décision
+  d'exploitant. L'admin le fait.
+
+Deux points de conception valent d'être connus.
+
+**L'adresse e-mail ne s'écrit pas directement.** Le formulaire de compte confie
+le changement à allauth (`EmailAddress.objects.add_new_email`) : un lien part à
+la nouvelle adresse, et l'ancienne reste celle du compte tant que le lien n'est
+pas suivi. Écrire `User.email` à la main ferait perdre l'accès au compte sur une
+faute de frappe, puisque l'adresse est aussi un identifiant de connexion.
+
+**La déconnexion globale fait expirer les jetons, elle ne les supprime pas.**
+Les jetons sont référencés ailleurs — journaux, statistiques d'usage ; les
+effacer creuserait des trous dans l'historique. Les connexions par navigateur
+passent par la session Django et non par un jeton : elles ne sont pas listées,
+et la déconnexion globale ne les touche pas.
+
+Un mot pour qui édite ces gabarits. `DEBUG=0` active le loader de gabarits en
+cache : un fichier modifié dans `theme/portal/templates/` n'est **pas** relu, le
+montage soit-il en place. `docker compose restart app` après chaque retouche —
+sans quoi on corrige deux fois la même chose en croyant que le correctif ne
+prend pas. Et le commentaire de gabarit `{# … #}` ne vaut que sur **une** ligne :
+sur plusieurs, Django ne le reconnaît pas et le recopie dans la page. Le
+commentaire multiligne, c'est `{% comment %}`.
+
+### Retirer le portail
+
+Trois gestes, symétriques de ceux du thème :
+
+```shell
+# 1. Les réglages : commenter le bloc « Portail utilisateur » de
+#    theme/settings_custom.py (INSTALLED_APPS et ROOT_URLCONF).
+$EDITOR theme/settings_custom.py
+
+# 2. Les montages : retirer les deux lignes `portal` et `urls_custom.py` sous
+#    `app` ET sous `worker_wrapper`, dans docker-compose.override.yml.
+$EDITOR docker-compose.override.yml
+
+# 3. Recréer, puis recollecter.
+make up
+make static
+```
+
+`/` redirige alors de nouveau vers l'admin, et un compte non-staff reboucle :
+c'est le comportement de l'upstream, retrouvé tel quel.
+
+Le portail et le thème sont **indépendants**. Le portail charge
+`custom/theme.css` puis `custom/portal.css`, et `portal.css` ne redéfinit
+aucune couleur — il ne pose que des formes, sur les variables du thème.
+Retirer le thème rend donc le portail neutre, pas cassé.
 
 ## Espacer les tâches planifiées
 

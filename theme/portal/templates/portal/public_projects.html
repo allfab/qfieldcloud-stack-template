@@ -1,0 +1,11 @@
+{% extends 'portal/base.html' %}
+{% load i18n %}
+
+{% block title_contents %}{% trans "Projets publics" %}{% endblock %}
+
+{% block content %}
+<h1 class="qfc-page-title">{% trans "Projets publics" %}</h1>
+<p class="text-muted">{% trans "Les projets que leurs propriétaires ont ouverts à tous les comptes de cette instance." %}</p>
+
+{% include 'portal/_project_table.html' %}
+{% endblock content %}

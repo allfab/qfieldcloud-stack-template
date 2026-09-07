@@ -1,0 +1,71 @@
+{% extends 'portal/base.html' %}
+{% load i18n %}
+
+{% block title_contents %}{% if is_own_profile %}{% trans "Mes projets" %}{% else %}{{ profile_user.username }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+
+  <aside class="col-lg-3 mb-4">
+    <div class="card qfc-profile-card">
+      <div class="card-body text-center">
+        {% if avatar_url %}
+          <img src="{{ avatar_url }}" alt="{{ profile_user.username }}" class="qfc-avatar mb-3">
+        {% else %}
+          <div class="qfc-avatar qfc-avatar-empty mb-3">{{ profile_user.username|first|upper }}</div>
+        {% endif %}
+
+        {% if profile_user.get_full_name %}
+          <h1 class="qfc-profile-name">{{ profile_user.get_full_name }}</h1>
+        {% endif %}
+        <p class="qfc-profile-username">{{ profile_user.username }}</p>
+
+        {% if profile_user.useraccount.bio %}
+          <p class="text-muted qfc-profile-bio">{{ profile_user.useraccount.bio }}</p>
+        {% endif %}
+        {% if profile_user.useraccount.company %}
+          <p class="text-muted mb-1">{{ profile_user.useraccount.company }}</p>
+        {% endif %}
+        {% if profile_user.useraccount.location %}
+          <p class="text-muted mb-1">{{ profile_user.useraccount.location }}</p>
+        {% endif %}
+
+        {% if is_own_profile %}
+          <a href="{% url 'portal_settings_profile' profile_user.username %}"
+             class="btn btn-outline-primary btn-block mt-3">{% trans "Modifier le profil" %}</a>
+        {% endif %}
+      </div>
+
+      {% if is_own_profile and storage_total_bytes %}
+        <div class="card-body qfc-storage">
+          <h2 class="qfc-section-title">{% trans "Stockage" %}</h2>
+          <div class="progress qfc-storage-bar">
+            <div class="progress-bar" role="progressbar" style="width: {{ storage_used_ratio|floatformat:0 }}%"
+                 aria-valuenow="{{ storage_used_ratio|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <p class="text-muted mb-0 mt-2">
+            {% blocktrans with used=storage_used_bytes|filesizeformat total=storage_total_bytes|filesizeformat %}{{ used }} sur {{ total }}{% endblocktrans %}
+          </p>
+        </div>
+      {% endif %}
+
+      <div class="card-body">
+        <h2 class="qfc-section-title">{% trans "Organisations" %}</h2>
+        {% for organization in organizations %}
+          <div class="qfc-org-row">
+            <span>{{ organization.username }}</span>
+            <span class="text-muted">{{ organization.membership_role }}</span>
+          </div>
+        {% empty %}
+          <p class="text-muted mb-0"><em>{% trans "Aucune organisation." %}</em></p>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+
+  <div class="col-lg-9">
+    {% include 'portal/_project_table.html' %}
+  </div>
+
+</div>
+{% endblock content %}

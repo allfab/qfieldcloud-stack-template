@@ -1,0 +1,60 @@
+{% extends 'portal/settings_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block title_contents %}{% trans "Sécurité" %}{% endblock %}
+
+{% block settings_content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="qfc-card-header">
+        <h2 class="card-title mb-0">{% trans "Modifier le mot de passe" %}</h2>
+        <button type="submit" class="btn btn-outline-success">{% trans "Mettre à jour" %}</button>
+      </div>
+
+      {% bootstrap_form form %}
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Clients connectés" %}</h2>
+    <p class="text-muted">
+      {% trans "QField, QFieldSync et les autres clients gardent un jeton d'accès. Les connexions par navigateur n'en utilisent pas et ne sont donc pas listées ici." %}
+    </p>
+
+    <div class="table-responsive">
+      <table class="table qfc-project-table mb-0">
+        <thead>
+          <tr>
+            <th scope="col">{% trans "Client" %}</th>
+            <th scope="col">{% trans "Dernier usage" %}</th>
+            <th scope="col">{% trans "Expire le" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for token in tokens %}
+            <tr>
+              <td>{{ token.get_client_type_display }}</td>
+              <td>{{ token.last_used_at|default:"—" }}</td>
+              <td>{{ token.expires_at }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3" class="qfc-empty text-muted">{% trans "Aucun client connecté." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if tokens %}
+      <form method="post" action="{% url 'portal_revoke_tokens' account_user.username %}" class="text-right mt-3">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">{% trans "Déconnecter tous les clients" %}</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock settings_content %}

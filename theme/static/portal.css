@@ -1,0 +1,330 @@
+/* Mise en page du portail utilisateur (/, /a/…, /settings/…).
+ *
+ * Chargé APRÈS theme.css, dont il reprend les variables : aucune couleur
+ * n'est redéfinie ici, seulement des formes. Corollaire — retirer le thème
+ * ne casse pas le portail, il le rend simplement neutre.
+ *
+ * Bootstrap 4.6 en dessous, comme les pages publiques.
+ */
+
+/* --- Le fond ------------------------------------------------------------ */
+
+/* theme.css pose les courbes de niveau en filigrane plein écran : bien pour
+ * un formulaire de connexion isolé, trop pour une page dense. On les garde,
+ * discrètes, et sans la remontée en `position: relative` de chaque enfant du
+ * body, qui décalerait le menu déroulant du bandeau. */
+.qfc-portal::before {
+  --qfc-contour-opacity: 0.07;
+}
+
+.qfc-portal-main {
+  padding-top: 1.75rem;
+  padding-bottom: 2.5rem;
+  flex: 1 0 auto;
+}
+
+/* --- Bandeau ------------------------------------------------------------ */
+
+/* theme.css met `overflow: hidden` sur la barre pour y contenir le filigrane.
+ * Le portail y ajoute un menu déroulant, qui serait rogné net. */
+.qfc-portal .navbar.bg-primary {
+  overflow: visible;
+}
+
+.qfc-portal .navbar-brand {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.qfc-portal .navbar-nav {
+  position: relative;
+  z-index: 1;
+}
+
+.qfc-portal .navbar-dark .nav-link {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 600;
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+
+.qfc-portal .navbar-dark .nav-link:hover,
+.qfc-portal .navbar-dark .nav-link.active {
+  color: #ffffff;
+}
+
+.qfc-portal .navbar-dark .nav-link.active {
+  box-shadow: inset 0 -3px 0 var(--qfc-green);
+}
+
+/* --- Titres ------------------------------------------------------------- */
+
+.qfc-page-title {
+  color: var(--qfc-blue-deep);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.qfc-section-title {
+  color: var(--qfc-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+/* L'en-tête d'une carte de réglages : le titre, et l'action qui l'enregistre.
+ * En rangée flex, le bouton reste sur la ligne du titre et se replie dessous
+ * plutôt que de déborder. */
+.qfc-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+/* --- Profil ------------------------------------------------------------- */
+
+.qfc-avatar {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--qfc-line);
+  background-color: var(--qfc-ground);
+}
+
+.qfc-avatar-sm {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+/* Sans avatar, l'initiale : un trou rond serait pire qu'une lettre. */
+.qfc-avatar-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 2.5rem;
+  color: var(--qfc-blue);
+}
+
+.qfc-avatar-sm.qfc-avatar-empty {
+  font-size: 1.25rem;
+}
+
+.qfc-profile-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--qfc-ink);
+  margin-bottom: 0.15rem;
+}
+
+.qfc-profile-username {
+  color: var(--qfc-blue);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.qfc-profile-bio {
+  font-size: 0.92rem;
+}
+
+.qfc-storage-bar {
+  height: 0.65rem;
+  border-radius: 999px;
+  background-color: var(--qfc-line);
+}
+
+.qfc-storage-bar .progress-bar {
+  background-color: var(--qfc-blue);
+}
+
+.qfc-org-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--qfc-line);
+  font-size: 0.92rem;
+}
+
+.qfc-org-row:last-child {
+  border-bottom: 0;
+}
+
+/* --- Barre d'outils du tableau ------------------------------------------ */
+
+.qfc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.qfc-toolbar .input-group {
+  flex: 1 1 16rem;
+  width: auto;
+}
+
+.qfc-toolbar-select {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 11rem;
+}
+
+/* --- Tableau des projets ------------------------------------------------ */
+
+/* theme.css met `overflow: hidden` sur .card pour tenir le liseré de tête ;
+ * un tableau plus large que la carte serait donc coupé sans recours. Le
+ * conteneur de défilement lui rend sa barre. */
+.qfc-portal .card .table-responsive {
+  overflow-x: auto;
+}
+
+.qfc-project-table {
+  color: var(--qfc-ink);
+  margin-bottom: 0;
+}
+
+.qfc-project-table thead th {
+  border-top: 0;
+  border-bottom: 1px solid var(--qfc-line);
+  color: var(--qfc-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.qfc-project-table td {
+  border-top-color: var(--qfc-line);
+  vertical-align: middle;
+}
+
+.qfc-project-name {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.qfc-project-description {
+  font-size: 0.85rem;
+  margin-top: 0.15rem;
+}
+
+.qfc-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+/* --- Pastilles ---------------------------------------------------------- */
+
+.qfc-badge-visibility {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--qfc-line);
+  color: var(--qfc-muted);
+}
+
+.qfc-badge-public {
+  border-color: var(--qfc-green);
+  color: var(--qfc-green-dark);
+}
+
+/* Un état se lit à son mot ; la pastille de couleur ne fait que le doubler,
+ * pour ne pas reposer sur la seule couleur. */
+.qfc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.qfc-status::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.qfc-status-ok {
+  color: var(--qfc-green-solid);
+}
+
+.qfc-status-busy {
+  color: var(--qfc-blue);
+}
+
+.qfc-status-failed {
+  color: #b3261e;
+}
+
+/* --- Colonne des réglages ----------------------------------------------- */
+
+.qfc-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--qfc-line);
+}
+
+.qfc-settings-nav .nav-link {
+  border-radius: 8px;
+  color: var(--qfc-blue);
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+}
+
+.qfc-settings-nav .nav-link:hover {
+  background-color: var(--qfc-line);
+}
+
+.qfc-settings-nav .nav-link.active {
+  background-color: var(--qfc-blue);
+  color: #ffffff;
+}
+
+/* --- Pied de page ------------------------------------------------------- */
+
+.qfc-portal .footer {
+  font-size: 0.88rem;
+}
+
+/* --- Variante sombre ---------------------------------------------------- */
+
+/* theme.css bascule déjà toutes les variables ; il ne reste que les trois
+ * endroits où une couleur est écrite en dur plus haut. */
+@media (prefers-color-scheme: dark) {
+  .qfc-page-title {
+    color: #dfe8f6;
+  }
+
+  .qfc-status-ok {
+    color: #9ada4c;
+  }
+
+  .qfc-status-failed {
+    color: #f2857c;
+  }
+
+  .qfc-settings-nav .nav-link.active {
+    background-color: #4a6fae;
+  }
+}

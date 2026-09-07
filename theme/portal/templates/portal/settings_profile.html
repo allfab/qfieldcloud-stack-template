@@ -1,0 +1,26 @@
+{% extends 'portal/settings_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block title_contents %}{% trans "Profil" %}{% endblock %}
+
+{% block settings_content %}
+<div class="card">
+  <div class="card-body">
+    {# `enctype` est obligatoire : sans lui l'avatar n'arrive jamais au serveur. #}
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="qfc-card-header">
+        <h2 class="card-title mb-0">{% trans "Profil" %}</h2>
+        <button type="submit" class="btn btn-outline-success">{% trans "Enregistrer" %}</button>
+      </div>
+
+      {% if avatar_url %}
+        <img src="{{ avatar_url }}" alt="{{ account_user.username }}" class="qfc-avatar mb-3">
+      {% endif %}
+
+      {% bootstrap_form form %}
+    </form>
+  </div>
+</div>
+{% endblock settings_content %}

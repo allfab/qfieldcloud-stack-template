@@ -1,0 +1,21 @@
+{% extends 'portal/settings_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block title_contents %}{% trans "Notifications" %}{% endblock %}
+
+{% block settings_content %}
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="qfc-card-header">
+        <h2 class="card-title mb-0">{% trans "Notifications" %}</h2>
+        <button type="submit" class="btn btn-outline-success">{% trans "Enregistrer" %}</button>
+      </div>
+
+      {% bootstrap_form form %}
+    </form>
+  </div>
+</div>
+{% endblock settings_content %}

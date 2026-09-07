@@ -1,0 +1,35 @@
+{% extends 'portal/base.html' %}
+{% load i18n %}
+
+{% block content %}
+<header class="qfc-settings-header">
+  {% if avatar_url %}
+    <img src="{{ avatar_url }}" alt="{{ account_user.username }}" class="qfc-avatar qfc-avatar-sm">
+  {% else %}
+    <div class="qfc-avatar qfc-avatar-sm qfc-avatar-empty">{{ account_user.username|first|upper }}</div>
+  {% endif %}
+  <div>
+    <h1 class="qfc-page-title mb-0">{{ account_user.username }}</h1>
+    <p class="text-muted mb-0">{% trans "Compte utilisateur" %}</p>
+  </div>
+</header>
+
+<div class="row">
+  <nav class="col-lg-3 mb-4">
+    <div class="nav flex-column qfc-settings-nav">
+      <a class="nav-link {% if settings_section == 'account' %}active{% endif %}"
+         href="{% url 'portal_settings_account' account_user.username %}">{% trans "Compte utilisateur" %}</a>
+      <a class="nav-link {% if settings_section == 'profile' %}active{% endif %}"
+         href="{% url 'portal_settings_profile' account_user.username %}">{% trans "Profil" %}</a>
+      <a class="nav-link {% if settings_section == 'notifications' %}active{% endif %}"
+         href="{% url 'portal_settings_notifications' account_user.username %}">{% trans "Notifications" %}</a>
+      <a class="nav-link {% if settings_section == 'security' %}active{% endif %}"
+         href="{% url 'portal_settings_security' account_user.username %}">{% trans "Sécurité" %}</a>
+    </div>
+  </nav>
+
+  <div class="col-lg-9">
+    {% block settings_content %}{% endblock settings_content %}
+  </div>
+</div>
+{% endblock content %}

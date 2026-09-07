@@ -10,10 +10,24 @@ D'où le nom ci-dessous, à changer avant la mise en service.
 """
 
 from qfieldcloud.settings import *  # noqa: F401,F403
-from qfieldcloud.settings import JAZZMIN_SETTINGS
+from qfieldcloud.settings import INSTALLED_APPS, JAZZMIN_SETTINGS
 
 # La seule ligne à changer : elle nomme l'instance partout, onglet compris.
 INSTANCE_NAME = "Mon instance QFieldCloud"
+
+# --- Portail utilisateur -------------------------------------------------
+#
+# L'upstream ne livre aucune page pour un utilisateur ordinaire : `/` renvoie
+# vers l'admin, où un compte non-staff tourne en boucle de redirections. Le
+# portail comble ce trou depuis le dehors, comme le thème — une application
+# Django montée dans l'image, et une URLconf qui reprend celle de l'upstream.
+#
+# `django_cleanup` doit rester la DERNIÈRE application installée : elle
+# s'accroche aux signaux de suppression de fichiers et veut passer après tout
+# le monde. D'où l'insertion en avant-dernière position.
+INSTALLED_APPS = [*INSTALLED_APPS[:-1], "qfieldcloud.portal", INSTALLED_APPS[-1]]
+
+ROOT_URLCONF = "qfieldcloud.urls_custom"
 
 # Pages publiques (connexion, inscription, réinitialisation).
 WHITELABEL = {

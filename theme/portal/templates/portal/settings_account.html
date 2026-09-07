@@ -1,0 +1,52 @@
+{% extends 'portal/settings_base.html' %}
+{% load i18n bootstrap4 %}
+
+{% block title_contents %}{% trans "Compte utilisateur" %}{% endblock %}
+
+{% block settings_content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="qfc-card-header">
+        <h2 class="card-title mb-0">{% trans "Compte utilisateur" %}</h2>
+        <button type="submit" class="btn btn-outline-success">{% trans "Enregistrer" %}</button>
+      </div>
+
+      {% comment %}
+        Le nom d'utilisateur est l'identifiant de toutes les URL de projet, et
+        l'upstream ne prévoit aucune redirection après un renommage : il
+        s'affiche, il ne se change pas ici.
+      {% endcomment %}
+      <div class="form-group">
+        <label for="username-readonly">{% trans "Nom d'utilisateur" %}</label>
+        <input type="text" id="username-readonly" class="form-control" value="{{ account_user.username }}" disabled>
+        <small class="form-text text-muted">{% trans "Le nom d'utilisateur ne se change pas : il est dans l'adresse de chacun de vos projets." %}</small>
+      </div>
+
+      {% bootstrap_form form %}
+
+      {% if pending_email %}
+        <div class="alert alert-info mb-0">
+          {% blocktrans with email=pending_email.email %}Un changement vers <strong>{{ email }}</strong> attend sa confirmation.{% endblocktrans %}
+        </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Comptes liés" %}</h2>
+    {% for account in connected_accounts %}
+      <div class="qfc-org-row">
+        <span>{{ account.provider }}</span>
+        <span class="text-muted">{{ account.uid }}</span>
+      </div>
+    {% empty %}
+      <p class="text-muted mb-0">{% trans "Aucun compte externe lié." %}</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock settings_content %}
