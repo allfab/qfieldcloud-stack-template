@@ -219,14 +219,40 @@ packaging que le quota global s'applique.
 ```bash
 git -C src fetch --tags
 git -C src checkout v26.27
-make check && make config
+make theme-diff                 # le gabarit upstream a-t-il bougé ?
+make check && make config       # lire les WARN de `config`, pas seulement la sortie de `check`
 make up
 cd src && docker compose --env-file ../.env exec app python manage.py migrate
-git add src && git commit -m "Montée en v26.27"
+git add src .env.template && git commit -m "Montée en v26.27"
 ```
 
-Le commit ne contient qu'un changement de pointeur de sous-module. C'est tout
-l'intérêt du montage : rien à reporter à la main.
+**`make theme-diff` juste après le `checkout`.** Le thème recopie un seul fichier de
+l'upstream, `account/base.html`, et le `checkout` vient peut-être d'en livrer une
+version différente. Sortie vide = la copie du thème reste valable, on continue.
+Sortie non vide = reporter la ligne `<link>` dans le nouveau gabarit et
+rafraîchir le fichier `.upstream` *avant* le `make up`, sinon l'instance repart
+avec un gabarit périmé. Voir « Thème ».
+
+**Les avertissements de `make config` sont la vraie barrière**, et c'est le
+piège de cette section. Une nouvelle version ajoute des variables, et
+`make check` ne les verra jamais : `check_envvars.py` ne compare que dans un
+sens — variables du `.env` absentes des fichiers Compose. L'inverse, une
+variable réclamée par Compose et absente du `.env`, n'est signalé que par un
+`WARN […] variable is not set` de `docker compose config`, facile à laisser
+filer. Or beaucoup de réglages sont lus par un `int(os.environ[...])` ou un
+`float(os.environ[...])` **sans défaut** : Compose substitue une chaîne vide, la
+conversion lève une exception à l'import des réglages, et `app` comme
+`worker_wrapper` refusent de démarrer. Zéro `WARN`, ou on ne monte pas.
+
+Toute variable ainsi découverte se recopie dans `.env` **et** dans
+`.env.template` — seul le second est suivi par git. D'où le `git add src
+.env.template` : contrairement à ce que le montage laisse espérer, une montée de
+version n'est pas toujours qu'un changement de pointeur de sous-module. Elle
+l'est pour le code, jamais forcément pour la configuration.
+
+Reste à surveiller le `QGIS_VERSION` des services `qgis3` et `qgis4` dans
+`src/docker-compose.yml` : s'il a bougé, `make up` reconstruit les deux images
+depuis les dépôts QGIS, et c'est long.
 
 ## Retirer un service upstream
 
@@ -247,9 +273,15 @@ faut la nommer, en réactivant le profil le temps de la commande :
 docker compose --env-file ../.env --profile never rm -sf certbot
 ```
 
-Ce dépôt retire ainsi `certbot` (le TLS est terminé par un frontal), puis
-`rustfs` et `createbuckets` (le stockage objet est externalisé). Si vous restez
-en profil standalone, enlevez les deux dernières lignes `profiles`.
+Ce dépôt retire ainsi `certbot` (le TLS est terminé par un frontal), `rustfs` et
+`createbuckets` (le stockage objet est externalisé), et `smtp4dev` (le courrier
+part par un vrai relais, `EMAIL_HOST`). Si vous restez en profil standalone,
+enlevez ces lignes `profiles`.
+
+Une variable lue par un service retiré doit malgré tout **rester définie** dans
+`.env` : Compose interpole tous les fichiers de `COMPOSE_FILE` avant de filtrer
+les profils. Les `SMTP4DEV_*_PORT` et `OBJECT_STORAGE_*` ne publient donc plus
+rien, mais les supprimer ferait crier Compose à chaque commande.
 
 ## Thème
 
