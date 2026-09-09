@@ -113,7 +113,7 @@ Toutes sont marquées `change_me` ou pointent vers `example.org` dans le templat
 | `SMTP4DEV_WEB_BIND_IP` | **Non upstream** : où publier l'interface web du piège à courriels. `127.0.0.1` par défaut ; voir le piège 3 avant d'y mettre une IP de LAN |
 | `DJANGO_SETTINGS_MODULE` | Le point d'extension de **tous** les réglages Django. Le passer à `qfieldcloud.settings_custom` active `theme/` ; le laisser au défaut donne l'apparence upstream. Voir « Thème » |
 
-## Les trois pièges qui coûtent une soirée
+## Les quatre pièges qui coûtent une soirée
 
 **1. `COMPOSE_FILE` livré par l'upstream est un profil de développement.** Le template
 charge `standalone` + `prod` + votre override :
@@ -155,6 +155,43 @@ aux mêmes messages et le SMTP accepterait n'importe quel envoi : ils restent su
 loopback en dur. À `127.0.0.1`, l'accès se fait par un tunnel SSH :
 `ssh -N -L 8012:127.0.0.1:8012 <hôte>`. La sortie définitive de ce compromis, c'est
 un vrai relais SMTP — après quoi smtp4dev se retire par un profil.
+
+**4. `docker system prune -af` emporte les images QGIS, et le message d'erreur ment.**
+Les services `qgis3` et `qgis4` ne sont que des prétextes à construire : ils lancent
+`echo QGIS3 built` puis sortent aussitôt. Leurs images ne sont donc jamais tenues par
+un conteneur en marche. Or `prune -af` supprime d'abord les conteneurs arrêtés — dont
+ces deux-là — puis les images devenues non référencées. Les vrais consommateurs, eux,
+sont les conteneurs éphémères que `worker_wrapper` crée par l'API Docker : ils
+n'existent que le temps d'un job, et le nettoyage ne peut pas les voir. Vues de
+`prune`, ces images sont toujours « inutilisées », alors qu'elles sont indispensables.
+
+Rien ne prévient. La panne n'apparaît qu'au job suivant, et sous une forme trompeuse :
+
+```
+pull access denied for qfieldcloud-qgis3, repository does not exist
+or may require 'docker login'
+```
+
+On part alors chercher un problème d'authentification vers un registre distant. Il n'y
+en a pas : `worker_wrapper` demande à Docker de lancer l'image, Docker ne la trouve pas
+en local et **se rabat automatiquement sur un `pull`** vers le Hub, où cette image
+n'existe évidemment pas puisqu'elle se construit chez vous. Le vrai message est le
+premier de la pile d'exceptions, dans le `feedback` du job :
+
+```
+No such image: qfieldcloud-qgis3:latest
+```
+
+Le correctif est la reconstruction, et elle est longue (3 Go et 2,3 Go) :
+
+```bash
+cd src && docker compose --env-file ../.env build qgis3 qgis4
+```
+
+Pour nettoyer sans se blesser, `docker image prune` **sans** `-a` ne touche qu'aux
+images anonymes. Et c'est la même mécanique qui rend un `make up` de montée de version
+long : dès que `QGIS_VERSION` bouge dans `src/docker-compose.yml`, ces deux images se
+refont entièrement.
 
 ## Ce que l'instance n'a pas
 
