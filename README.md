@@ -310,15 +310,57 @@ faut la nommer, en réactivant le profil le temps de la commande :
 docker compose --env-file ../.env --profile never rm -sf certbot
 ```
 
-Ce dépôt retire ainsi `certbot` (le TLS est terminé par un frontal), `rustfs` et
-`createbuckets` (le stockage objet est externalisé), et `smtp4dev` (le courrier
-part par un vrai relais, `EMAIL_HOST`). Si vous restez en profil standalone,
-enlevez ces lignes `profiles`.
+### Template ou instance : deux niveaux, deux fichiers
 
-Une variable lue par un service retiré doit malgré tout **rester définie** dans
-`.env` : Compose interpole tous les fichiers de `COMPOSE_FILE` avant de filtrer
-les profils. Les `SMTP4DEV_*_PORT` et `OBJECT_STORAGE_*` ne publient donc plus
-rien, mais les supprimer ferait crier Compose à chaque commande.
+C'est la distinction qui coûte le plus cher à comprendre après coup. Un service
+peut être retiré parce que **le montage** n'en veut pas, ou parce que **cette
+machine-ci** n'en veut pas. Les deux ne s'écrivent pas au même endroit.
+
+`docker-compose.override.yml` est **suivi par git** : ce qu'on y retire, tout
+clone du dépôt le perd. Ce dépôt n'y retire donc qu'un service, `certbot`, parce
+que le montage suppose un frontal qui termine le TLS — et qu'une pile sans
+certbot démarre quand même, `mkcert` fournissant un certificat local.
+
+`docker-compose.override.instance.yml` n'est **pas suivi** (voir `.gitignore`),
+et c'est votre `.env` qui l'ajoute en queue de `COMPOSE_FILE` :
+
+```
+COMPOSE_FILE=docker-compose.yml:docker-compose.override.standalone.yml:docker-compose.override.prod.yml:../docker-compose.override.yml:../docker-compose.override.instance.yml
+```
+
+C'est là que vont les retraits propres à la machine — un vrai relais SMTP à la
+place de `smtp4dev`, un stockage objet externe à la place de `rustfs` et de son
+`createbuckets` :
+
+```yaml
+services:
+  smtp4dev:
+    profiles: ["never"]
+  rustfs:
+    profiles: ["never"]
+  createbuckets:
+    profiles: ["never"]
+```
+
+**Pourquoi cette séparation n'est pas de la coquetterie.** `smtp4dev` et `rustfs`
+sont ce vers quoi `.env.template` pointe par défaut : `EMAIL_HOST=smtp4dev` et un
+`STORAGES` sur `http://172.17.0.1:8009`. Les retirer du fichier suivi livre un
+template dont le courrier et le stockage désignent des services qui ne démarrent
+jamais. Rien ne le signale : l'inscription échoue en silence, et le premier
+téléversement casse. Le fichier suivi doit rester **une pile qui démarre seule**.
+
+### Deux détails qui piègent
+
+Une variable lue par un service retiré doit **rester définie** dans `.env` :
+Compose interpole tous les fichiers de `COMPOSE_FILE` avant de filtrer les
+profils. Les `SMTP4DEV_*`, `OBJECT_STORAGE_*` et `STORAGE_*_BIND_IP` ne publient
+plus rien, mais les supprimer fait crier Compose à chaque commande. Donnez-leur
+des valeurs inertes — du loopback partout — plutôt que de les enlever.
+
+Et une valeur qui part dans un `ports:` doit être une **adresse IP valide**, pas
+un `change_me`. Sinon ce n'est pas un avertissement mais une erreur sèche,
+`invalid IP address`, et `docker compose config` refuse de résoudre la pile
+entière.
 
 ## Thème
 
