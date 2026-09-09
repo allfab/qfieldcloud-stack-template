@@ -3,7 +3,7 @@
 
 # Plafonds de journalisation. L'upstream n'en pose que sur cinq services (app et
 # nginx à 1000m × 10, soit 9,8 Go chacun ; qgis3, qgis4 et worker_wrapper à
-# 100m × 10). Les autres — db, ofelia, memcached, smtp4dev, webdav — n'en
+# 100m × 10). Les autres — db, ofelia, memcached, webdav — n'en
 # déclarent aucun et retombent sur le défaut du démon, c'est-à-dire json-file
 # SANS limite. Le total de 22,5 Go souvent cité est donc un plancher, pas un
 # plafond. On borne ici les services que Compose gère.
@@ -117,36 +117,30 @@ services:
     # RETIRÉ : le stockage objet est sorti de la machine (serveur Garage sur
     # 10.10.20.21). Les objets ont été miroités, `mc diff` est vide, et le
     # volume `rustfs_data` est conservé quelques jours en repli.
+    #
+    # Il portait ici un `ports:` qui publiait l'API S3 sur la passerelle docker0
+    # plutôt que sur le loopback : l'endpoint_url de STORAGES est recopié tel
+    # quel dans les URL présignées, que nginx ET les conteneurs QGIS éphémères
+    # doivent pouvoir atteindre. Cette contrainte vaut toujours — elle est
+    # simplement satisfaite ailleurs, par l'adresse de Garage dans STORAGES.
     profiles: ["never"]
-    # L'API S3 ne peut PAS aller sur 127.0.0.1 : l'endpoint_url de STORAGES
-    # (http://172.17.0.1:8009) est recopié tel quel dans les URL présignées, que
-    # nginx ET les conteneurs QGIS éphémères doivent pouvoir atteindre. On la
-    # publie donc sur la passerelle docker0 : joignable de tout conteneur et de
-    # l'hôte, invisible depuis le LAN. La console web, elle, reste sur loopback.
-    ports: !override
-      - "${STORAGE_API_BIND_IP}:${OBJECT_STORAGE_API_PORT}:9000"
-      - "${STORAGE_CONSOLE_BIND_IP}:${OBJECT_STORAGE_BROWSER_PORT}:9001"
 
   smtp4dev:
-    # Piège à courriels de développement : il n'envoie rien et ne doit rien
-    # recevoir de l'extérieur. L'application l'atteint par le réseau Compose
-    # (EMAIL_HOST=smtp4dev), pas par ces ports.
+    # RETIRÉ : le courrier part par un vrai relais (EMAIL_HOST dans .env), pas
+    # par le piège à courriels de développement. Le volume `smtp4dev_data` ne
+    # contient que les messages capturés avant la bascule.
     #
-    # Seule l'interface WEB peut sortir sur le LAN, via sa propre variable : elle
-    # est la seule qu'on ait une raison de consulter depuis un navigateur. SMTP et
-    # IMAP restent sur le loopback en dur — l'IMAP donne accès aux mêmes messages
-    # que l'interface, et le SMTP accepterait n'importe quel envoi. Une seule
-    # porte au lieu de trois, pour le même service rendu.
-    ports: !override
-      - "${SMTP4DEV_WEB_BIND_IP}:${SMTP4DEV_WEB_PORT}:80"
-      - "127.0.0.1:${SMTP4DEV_SMTP_PORT}:25"
-      - "127.0.0.1:${SMTP4DEV_IMAP_PORT}:143"
-    logging: *logging-cap
+    # Il portait ici un `ports:` qui gardait SMTP et IMAP sur le loopback et ne
+    # laissait sortir que l'interface web : celle-ci n'a AUCUNE authentification
+    # et donne à lire les liens de réinitialisation de mot de passe. À remonter
+    # tel quel si ce service revient un jour.
+    profiles: ["never"]
 
   webdav:
-    # Même logique que rustfs : s'il sert un jour de stockage d'attachements,
-    # c'est WEBDAV_SERVER_NAMES ("172.17.0.1,webdav") qui dit par où. Rien de
-    # tout cela ne passe par le LAN.
+    # Le seul service de stockage encore debout, et il ne sert rien pour
+    # l'instant : STORAGES ne déclare aucune entrée WebDAV. S'il sert un jour de
+    # stockage d'attachements, c'est WEBDAV_SERVER_NAMES ("172.17.0.1,webdav")
+    # qui dira par où. On le publie sur la passerelle docker0, pas sur le LAN.
     ports: !override
       - "${WEBDAV_BIND_IP}:${WEBDAV_PUBLIC_PORT}:80"
     logging: *logging-cap

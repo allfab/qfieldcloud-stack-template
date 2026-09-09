@@ -2,11 +2,17 @@
 COMPOSE = cd src && docker compose --env-file ../.env
 
 # check_envvars.py analyse le DOSSIER src/, pas la chaîne COMPOSE_FILE. Il ignore
-# donc ../docker-compose.override.yml et signale WEB_BIND_IP comme orpheline, alors
-# qu'elle y est bien utilisée. Les S3_BACKUP_* ne sont lues que par
-# ./scripts/backup-storage.sh, qui n'est pas un fichier Compose : même cas de figure.
-# DEBUG_QGIS_WORKER_HOST_PATH, elle, est sans emploi.
-IGNORED_VARS = DEBUG_QGIS_WORKER_HOST_PATH WEB_BIND_IP STORAGE_API_BIND_IP STORAGE_CONSOLE_BIND_IP SMTP4DEV_BIND_IP SMTP4DEV_WEB_BIND_IP WEBDAV_BIND_IP S3_BACKUP_ENDPOINT S3_BACKUP_ACCESS_KEY S3_BACKUP_SECRET_KEY S3_BACKUP_BUCKET
+# donc ../docker-compose.override.yml et signale WEB_BIND_IP et WEBDAV_BIND_IP
+# comme orphelines, alors qu'elles y sont bien utilisées. Les S3_BACKUP_* ne sont
+# lues que par ./scripts/backup-storage.sh, qui n'est pas un fichier Compose :
+# même cas de figure. DEBUG_QGIS_WORKER_HOST_PATH, elle, est sans emploi.
+#
+# Cette liste est un angle mort : une variable qu'on y met ne sera plus jamais
+# signalée, même le jour où elle ne sert vraiment plus. C'est ce qui est arrivé
+# aux quatre *_BIND_IP de rustfs et smtp4dev, masquées ici bien après la mort
+# des `ports:` qui les lisaient. N'y ajouter que ce qui est vraiment utilisé
+# ailleurs, et l'y retirer en même temps que son dernier lecteur.
+IGNORED_VARS = DEBUG_QGIS_WORKER_HOST_PATH WEB_BIND_IP WEBDAV_BIND_IP S3_BACKUP_ENDPOINT S3_BACKUP_ACCESS_KEY S3_BACKUP_SECRET_KEY S3_BACKUP_BUCKET
 
 .PHONY: up down config ps logs migrate check backup restore-test static theme-diff plans plans-dry
 
